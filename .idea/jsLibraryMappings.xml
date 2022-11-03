@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="JavaScriptLibraryMappings">
+    <file url="PROJECT" libraries="{aplayer, base64, dplayer, editor.md, gridmanager, hls.js, jQuery, layUI, lazyload, moment, other, photoswipe, prism, signalr, tocbot}" />
+  </component>
+</project>
