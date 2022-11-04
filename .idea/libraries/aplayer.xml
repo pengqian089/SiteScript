@@ -1,0 +1,14 @@
+<component name="libraryTable">
+  <library name="aplayer" type="javaScript">
+    <properties>
+      <sourceFilesUrls>
+        <item url="file://$PROJECT_DIR$/../SiteSource/core/lib/aplayer" />
+      </sourceFilesUrls>
+    </properties>
+    <CLASSES>
+      <root url="file://$PROJECT_DIR$/../SiteSource/core/lib/aplayer" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

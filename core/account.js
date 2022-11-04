@@ -241,7 +241,7 @@ layui.use(["table", "form", "upload", "layer", "element"], function () {
             supportCheckbox: false,
             cellHover: function (row, _, collIndex) {
                 if (collIndex === 2) {
-                    return {text: row["blogTitle"]}
+                    return {text: row["title"]}
                 }
             },
             columnData: [
@@ -251,10 +251,10 @@ layui.use(["table", "form", "upload", "layer", "element"], function () {
                     isShow: false
                 },
                 {
-                    key: 'blogTitle',
+                    key: 'title',
                     text: '标题',
                     template: function (cell, row) {
-                        return `<a href="/article/read/${row.id}" target="_blank">${row["blogTitle"]}</a>`
+                        return `<a href="/article/read/${row.id}" target="_blank">${row["title"]}</a>`
                     }
                 }, {
                     key: "preview",
@@ -269,7 +269,7 @@ layui.use(["table", "form", "upload", "layer", "element"], function () {
                     key: 'viewCount',
                     text: '查看量'
                 }, {
-                    key: 'tag',
+                    key: 'tags',
                     text: '标签'
                 }, {
                     key: 'lastUpdateTime',
@@ -365,7 +365,7 @@ layui.use(["table", "form", "upload", "layer", "element"], function () {
             fullColumn: {
                 useFold: true,
                 fixed: "left",
-                bottomTemplate: function (row) {                    
+                bottomTemplate: function (row) {
                     let light = Prism.highlight(row["markdown"], Prism.languages.markdown, 'markdown');
                     return `<pre style="padding: 5px; max-height: 600px;overflow-y: auto;width: 100%;margin-bottom: 15px;white-space: pre-wrap;font-weight: bold">${light}</>`;
                     //return row["markdown"];
@@ -390,13 +390,7 @@ layui.use(["table", "form", "upload", "layer", "element"], function () {
                         return `<a href="javascript:;" class="preview" data-preview="/talk/preview/${row.id}">预览</a>`;
                     }
                 }, {
-                    key: 'id',
-                    text: '查看回复',
-                    template: function (cell, row) {
-                        return `<a href="/account/talkComments/${row.id}">查看回复</a>`;
-                    }
-                }, {
-                    key: 'zan',
+                    key: 'like',
                     text: '点赞数'
                 }, {
                     key: 'commentCount',
@@ -592,9 +586,9 @@ layui.use(["table", "form", "upload", "layer", "element"], function () {
                         return {text: row["from"]}
                     case 7:
                         let size = (row["musicLength"] / 1024 / 1024).toFixed(2) + "MB";
-                        return { text: size };
+                        return {text: size};
                     case 9:
-                        return { text: row.duration };
+                        return {text: row.duration};
                 }
             },
             rowRenderHandler: function (row, index) {
@@ -729,9 +723,9 @@ layui.use(["table", "form", "upload", "layer", "element"], function () {
             cellHover: function (row, _, collIndex) {
                 if (collIndex === 3) {
                     return {text: row["title"]}
-                } 
-                // else if (collIndex === 4) {
-                //     return {text: row["content"]}
+                }
+                    // else if (collIndex === 4) {
+                    //     return {text: row["content"]}
                 // } 
                 else if (collIndex === 6) {
                     return {text: row["more"]}
@@ -749,7 +743,7 @@ layui.use(["table", "form", "upload", "layer", "element"], function () {
                 }, {
                     key: 'content',
                     text: '内容',
-                    template:function(cell,row){
+                    template: function (cell, row) {
                         return $("<p>").text(row["content"]).html();
                     }
                 }, {

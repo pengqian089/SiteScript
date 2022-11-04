@@ -1,0 +1,14 @@
+<component name="libraryTable">
+  <library name="lazyload" type="javaScript">
+    <properties>
+      <sourceFilesUrls>
+        <item url="file://$PROJECT_DIR$/../SiteSource/core/lib/lazyload" />
+      </sourceFilesUrls>
+    </properties>
+    <CLASSES>
+      <root url="file://$PROJECT_DIR$/../SiteSource/core/lib/lazyload" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

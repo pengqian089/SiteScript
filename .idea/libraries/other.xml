@@ -1,0 +1,18 @@
+<component name="libraryTable">
+  <library name="other" type="javaScript">
+    <properties>
+      <sourceFilesUrls>
+        <item url="file://$PROJECT_DIR$/../SiteSource/core/js/jquery.pjax.js" />
+        <item url="file://$PROJECT_DIR$/../SiteSource/core/js/notify.js" />
+        <item url="file://$PROJECT_DIR$/../SiteSource/core/js/nprogress.js" />
+      </sourceFilesUrls>
+    </properties>
+    <CLASSES>
+      <root url="file://$PROJECT_DIR$/../SiteSource/core/js/jquery.pjax.js" />
+      <root url="file://$PROJECT_DIR$/../SiteSource/core/js/notify.js" />
+      <root url="file://$PROJECT_DIR$/../SiteSource/core/js/nprogress.js" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

@@ -1,6 +1,6 @@
 # SiteScript
 
 
-```
-uglifyjs ./core/js/site.js --source-map "url='site.min.js.map',base='./core/js'" -o ./core/js/site.min.js -c -m
+``` powershell
+uglifyjs ./core/account.js --source-map "url='account.js.map',base='./core'" -o ./core/account.min.js -c -m
 ```
