@@ -24,5 +24,6 @@
     <orderEntry type="library" name="gridmanager" level="project" />
     <orderEntry type="library" name="editor.md" level="project" />
     <orderEntry type="library" name="nplayer" level="project" />
+    <orderEntry type="library" name="nplayer-danmaku" level="project" />
   </component>
 </module>

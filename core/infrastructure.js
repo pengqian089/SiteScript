@@ -189,9 +189,9 @@ function ajaxFail(xhr, textStatus, errorThrown) {
 async function initVideoPlayer() {
     const playerId = "video-player";
     const mPlayerId = "m-video-player";
-    const player = document.getElementById(playerId) || document.getElementById(mPlayerId);
-    if (player !== null) {
-        player.style.marginBottom = "15px";
+    const playerElement = document.getElementById(playerId) || document.getElementById(mPlayerId);
+    if (playerElement !== null) {
+        //player.style.marginBottom = "15px";
         let response = await fetch(`${dpzOption.webApiBaseAddress}/api/Video`, {
             method: 'GET',
             headers: {'Content-Type': 'application/json'},
@@ -199,41 +199,62 @@ async function initVideoPlayer() {
         });
         let data = await response.json();
         let index = Math.floor(Math.random() * data.length);
-        new DPlayer({
-            container: document.getElementById(player.id),
-            danmaku: {
-                api: "/history/chat/",
-                id: data[index]["id"],
-                maximum: 2000,
-                token: "token",
-                user: "阿胖",
-                bottom: "15%"
-            },
-            video: {
-                url: data[index]["m3u8"],
-                type: 'hls',
-            },
+
+
+        let danmakuResponse = await fetch(`/history/danmaku/${data[index]["id"]}`);
+        let danmakuItems = await danmakuResponse.json();
+
+        const danmakuOptions = {items:danmakuItems};
+
+        const player = new NPlayer.Player({
+            plugins: [
+                new NPlayerDanmaku(danmakuOptions)
+            ]
         });
+
+        player.on('DanmakuSend', (opts) => {
+            console.log(opts)
+        });
+
+        const hls = new Hls();
+
+        hls.attachMedia(player.video);
+
+        hls.on(Hls.Events.MEDIA_ATTACHED, function () {
+            hls.loadSource(data[index]["m3u8"])
+        })
+
+        player.mount(playerElement);
     }
 
     const video = document.querySelector("[data-video]");
     if (video !== null) {
-        const data = JSON.parse(video.dataset.video);
-        new DPlayer({
-            container: video,
-            danmaku: {
-                api: "/history/chat/",
-                id: data.id,
-                maximum: 2000,
-                token: "token",
-                user: "阿胖",
-                bottom: "15%"
-            },
-            video: {
-                url: data.url,
-                type: 'hls',
-            },
+        const data2 = JSON.parse(video.dataset.video);
+
+        let danmakuResponse2 = await fetch(`/history/danmaku/${data2["id"]}`);
+        let danmakuItems2 = await danmakuResponse2.json();
+
+        const danmakuOptions = {items:danmakuItems2};
+
+        const player2 = new NPlayer.Player({
+            plugins: [
+                new NPlayerDanmaku(danmakuOptions)
+            ]
         });
+
+        player2.on('DanmakuSend', (opts) => {
+            console.log(opts)
+        });
+
+        const hls2 = new Hls();
+
+        hls2.attachMedia(player2.video);
+
+        hls2.on(Hls.Events.MEDIA_ATTACHED, function () {
+            hls2.loadSource(data2["url"])
+        });
+
+        player2.mount(video);
     }
 }
 
