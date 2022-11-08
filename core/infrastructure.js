@@ -30,21 +30,6 @@ $.fn.relativeTime = function () {
     });
 }
 
-const dpzOption = {
-    /**
-     * webapi地址
-     */
-    webApiBaseAddress: document.querySelector("meta[name=web-api-base-address]").content,
-    /**
-     * cdn地址
-     */
-    CDNBaseAddress: document.querySelector("meta[name=cdn-base-address]").content,
-    /**
-     * 是否为 dark模式
-     */
-    isDark: window.matchMedia('(prefers-color-scheme: dark)').matches
-};
-
 function loadImages(images) {
     let promises = [];
     for (let i = 0; i < images.length; i++) {
@@ -264,4 +249,21 @@ async function initFetchContent() {
             lightCode();
         });
     }
+}
+
+function generateToc() {
+    let toc = $(".js-toc");
+    if (toc.length === 0) return;
+    if ($(".article-detail-content").find("h1,h2,h3").length === 0) {
+        tocbot.destroy();
+        $("label.toc-icon.menu").hide();
+        toc.hide();
+        return;
+    }
+    tocbot.init({
+        tocSelector: '.js-toc',
+        contentSelector: '.article-detail-content',
+        headingSelector: 'h1, h2, h3',
+        hasInnerContainers: true,
+    });
 }

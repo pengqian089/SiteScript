@@ -1,5 +1,21 @@
 "use strict";
 
+const dpzOption = {
+    /**
+     * webapi地址
+     */
+    webApiBaseAddress: document.querySelector("meta[name=web-api-base-address]").content,
+    /**
+     * cdn地址
+     */
+    CDNBaseAddress: document.querySelector("meta[name=cdn-base-address]").content,
+    /**
+     * 是否为 dark模式
+     */
+    isDark: window.matchMedia('(prefers-color-scheme: dark)').matches
+};
+
+
 (function () {
     $.ajax({url: "/account/GetUserInfo"})
         .done(function (result) {
@@ -43,5 +59,22 @@
             let gallery = new PhotoSwipe(document.getElementById("gallery"), PhotoSwipeUI_Default, items, options);
             gallery.init();
         }).finally(() => layer.close(index));
+    });
+
+    // search
+    $(document).delegate("#i-search", "submit", function () {
+        const keyword = $("#i-keyword").val();
+        let q = $(this).find("[name=q]");
+        $(this).find("[name=q]").val(q.data("default") + " " + keyword);
+    });
+
+    $(document).delegate("#i-keyword", "keyup", function (e) {
+        if (e.keyCode === 13) {
+            $(this).parents("form").submit();
+        }
+    });
+
+    $(document).delegate("#i-search a.search-btn", "click", function () {
+        $(this).parents("form").submit();
     });
 })();

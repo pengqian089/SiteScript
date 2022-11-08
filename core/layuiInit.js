@@ -2,9 +2,7 @@
 
 layui.use(["element", "layer", "carousel", "util", "flow", "form", "upload"],
     function () {
-        let element =
-                layui.element,
-            layer = layui.layer,
+        let layer = layui.layer,
             carousel = layui.carousel,
             flow = layui.flow,
             util = layui.util,

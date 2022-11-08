@@ -1,12 +1,12 @@
-const layimOption = {
-    CDNBaseAddress : document.head.querySelector("meta[name=cdn-base-address]").content
-};
 layui.config({
-    layimPath: `${layimOption.CDNBaseAddress}/lib/layim/`,
-    layimAssetsPath: `${layimOption.CDNBaseAddress}/lib/layim/layim-assets/`,
+    layimPath: `${dpzOption.CDNBaseAddress}/lib/layim/`,
+    layimAssetsPath: `${dpzOption.CDNBaseAddress}/lib/layim/layim-assets/`,
 }).extend({
     layim: layui.cache.layimPath + 'layim'
 }).use(["layim", "layer"], function () {
+    if (layui.device().mobile === true){
+        return;
+    }
     let layim = layui.layim,
         layer = layui.layer;
     let chatConnection = new signalR.HubConnectionBuilder().withUrl("/chathub").withAutomaticReconnect().build();
