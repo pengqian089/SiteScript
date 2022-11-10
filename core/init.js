@@ -16,16 +16,15 @@ const dpzOption = {
 };
 
 
-(function () {
-    $.ajax({url: "/account/GetUserInfo"})
-        .done(function (result) {
-            if (result.success) {
-                $(".blog-user")
-                    .attr("href", "/account")
-                    .find("img")
-                    .attr({"src": `${result.data.avatar}`, "title": result.data.name});
-            }
-        }).fail(ajaxFail);
+(async function () {
+    let userResponse = await fetch("/account/GetUserInfo");
+    let userResult = await userResponse.json();
+    if(userResult["success"]){
+        $(".blog-user")
+            .attr("href", "/account")
+            .find("img")
+            .attr({"src": `${userResult.data.avatar}`, "title": userResult.data.name});
+    }
 
     let viewImages = ".article.shadow .article-left img,.mumble-list .mumble-item .mumble-content img,.article-detail-content img,#cd-timeline .content img";
     //图片查看
@@ -77,4 +76,15 @@ const dpzOption = {
     $(document).delegate("#i-search a.search-btn", "click", function () {
         $(this).parents("form").submit();
     });
+
+    const ap = new APlayer({
+        container: document.getElementById("aplayer"),
+        lrcType: 3,
+        fixed: true
+    });
+
+    let musicResponse = await fetch("/Music/Recommend");
+    let musicResult = await musicResponse.json();
+    ap.list.add(musicResult);
+
 })();
