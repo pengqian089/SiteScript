@@ -204,7 +204,7 @@ async function initVideoPlayer() {
         let danmakuResponse = await fetch(`/history/danmaku/${data[index]["id"]}`);
         let danmakuItems = await danmakuResponse.json();
 
-        const danmakuOptions = {items:danmakuItems};
+        const danmakuOptions = {items: danmakuItems};
 
         const player = new NPlayer.Player({
             plugins: [
@@ -212,8 +212,8 @@ async function initVideoPlayer() {
             ]
         });
 
-        player.on('DanmakuSend', (opts) => {
-            console.log(opts)
+        player.on('DanmakuSend', async (opts) => {
+            await sendDanmaku(opts, data[index]["id"]);
         });
 
         const hls = new Hls();
@@ -234,7 +234,7 @@ async function initVideoPlayer() {
         let danmakuResponse2 = await fetch(`/history/danmaku/${data2["id"]}`);
         let danmakuItems2 = await danmakuResponse2.json();
 
-        const danmakuOptions = {items:danmakuItems2};
+        const danmakuOptions = {items: danmakuItems2};
 
         const player2 = new NPlayer.Player({
             plugins: [
@@ -242,8 +242,8 @@ async function initVideoPlayer() {
             ]
         });
 
-        player2.on('DanmakuSend', (opts) => {
-            console.log(opts)
+        player2.on('DanmakuSend', async (opts) => {
+            await sendDanmaku(opts, data2["id"]);
         });
 
         const hls2 = new Hls();
@@ -257,6 +257,18 @@ async function initVideoPlayer() {
         player2.mount(video);
     }
 }
+
+async function sendDanmaku(danmaku, id) {
+    danmaku["id"] = id;
+    await fetch(`/history/danmaku`, {
+        method: 'post',
+        headers: {
+            'Content-Type': 'application/json;charset=utf-8'
+        },
+        body: JSON.stringify(danmaku)
+    });
+}
+
 
 async function initFetchContent() {
     let fetchContents = document.querySelectorAll("[data-request]");
