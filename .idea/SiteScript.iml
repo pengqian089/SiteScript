@@ -25,6 +25,6 @@
     <orderEntry type="library" name="editor.md" level="project" />
     <orderEntry type="library" name="nplayer" level="project" />
     <orderEntry type="library" name="nplayer-danmaku" level="project" />
-    <orderEntry type="library" name="cherry-markdown" level="project" />
+    <orderEntry type="library" name="ace" level="project" />
   </component>
 </module>
