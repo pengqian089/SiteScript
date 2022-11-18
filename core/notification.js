@@ -96,6 +96,10 @@
             setTimeout(updateRunTime, 1000);
         }
     });
+
+    connection.on("systemNotification", function (msg) {
+        layer.msg(msg);
+    });
 })();
 
 function showNotify(option) {
