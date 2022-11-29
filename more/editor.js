@@ -2,11 +2,11 @@ var aceEditor = {
     editor : null,
     initEditor: function (value,language) {
         aceEditor.editor = ace.edit("code-editor");
-        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        if(matchMedia('(prefers-color-scheme: dark)').matches)
             aceEditor.editor.setTheme("ace/theme/tomorrow_night");
-        } else {
+        else
             aceEditor.editor.setTheme("ace/theme/sqlserver");
-        }        
+
         aceEditor.editor.session.setMode(`ace/mode/${language}`);
         aceEditor.editor.setValue(value, -1);
         aceEditor.editor.session.setUseWrapMode(true);
