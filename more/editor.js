@@ -6,6 +6,7 @@ var aceEditor = {
             aceEditor.editor.setTheme("ace/theme/tomorrow_night");
         else
             aceEditor.editor.setTheme("ace/theme/sqlserver");
+
         aceEditor.editor.session.setMode(`ace/mode/${language}`);
         aceEditor.editor.setValue(value, -1);
         aceEditor.editor.session.setUseWrapMode(true);
