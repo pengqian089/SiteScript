@@ -77,6 +77,16 @@ const dpzOption = {
         $(this).parents("form").submit();
     });
 
+    $(document).delegate("[data-tips]", "touchend", function () {
+        let tips = $(this).data("tips");
+        layer.tips(tips, this, { tips: 3 });
+    });
+
+    $(document).delegate("time.timeago", "touchend", function () {
+        let title = $(this).attr("title");
+        layer.tips(title, this, { tips: 3 });
+    });
+
     const ap = new APlayer({
         container: document.getElementById("aplayer"),
         lrcType: 3,
