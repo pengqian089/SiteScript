@@ -155,32 +155,36 @@
         return false;
     });
 
-    // 点击设置
-    $(document).delegate(".bookmark-setting[data-id]", "click", function () {
-        let id = $(this).data("id");
-        let index = layer.load();
-        let width = $(window).width() > 600 ? "600px" : "100%";
-        $.ajax({
-            url: `/bookmark/update/${id}`,
-            type: "get",
-        }).done(function (result) {
-            if (typeof (result) === "object") {
-                if (!result.success) {
-                    layer.msg(result.msg);
+    layui.use(["element", "layer", "carousel", "util", "flow", "form", "upload"],function(){
+        let form = layui.form;
+
+        // 点击设置
+        $(document).delegate(".bookmark-setting[data-id]", "click", function () {
+            let id = $(this).data("id");
+            let index = layer.load();
+            let width = $(window).width() > 600 ? "600px" : "100%";
+            $.ajax({
+                url: `/bookmark/update/${id}`,
+                type: "get",
+            }).done(function (result) {
+                if (typeof (result) === "object") {
+                    if (!result.success) {
+                        layer.msg(result.msg);
+                    }
+                    return;
                 }
-                return;
-            }
-            layer.open({
-                type: 1,
-                content: result,
-                area: width,
-                success: function () {
-                    form.render();
-                }
-            });
-        }).always(function () {
-            layer.close(index);
-        }).fail(ajaxFail);
+                layer.open({
+                    type: 1,
+                    content: result,
+                    area: width,
+                    success: function () {
+                        form.render();
+                    }
+                });
+            }).always(function () {
+                layer.close(index);
+            }).fail(ajaxFail);
+        });
     });
 
     // 删除书签
