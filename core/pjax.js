@@ -46,6 +46,11 @@ layui.use(["element"],function(){
         pjaxCompleteInit();
         NProgress.done();
     });
+
+    let lazyLoadInstance = new LazyLoad({});
+    $(document).on("pjax:end", function () {
+        lazyLoadInstance.update();
+    });
 });
 
 /**

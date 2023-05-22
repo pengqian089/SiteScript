@@ -12,7 +12,6 @@ Write-Host $path
 "./core/bookmark.js",
 "./core/comment.js",
 "./core/mumble.js",
-"./core/topic.js",
 "./core/chat.js"
 
 

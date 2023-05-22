@@ -31,7 +31,7 @@
     });
 
     $(document).delegate("form.comment-form :input:not(textarea)", "keydown", function (e) {
-        return e.key != "Enter";
+        return e.key !== "Enter";
     });
 
     // 提交评论

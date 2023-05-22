@@ -83,6 +83,29 @@ layui.use(["table", "form", "upload", "layer", "element"], function () {
         return false;
     });
 
+    form.on("submit(account-unbind)", function (data) {
+        let index = layer.load(1), $form = $(data.form);
+        $.ajax({
+            url: $form.attr("action"),
+            type: $form.attr("method"),
+            data: data.field
+        }).done(function (result) {
+            if (!result.success) {
+                layer.msg(result.msg, {icon: 2, anim: 6});
+                return;
+            }
+            data.form.reset();
+            layer.msg("已成功解绑");
+        }).fail(function (data) {
+            if (data && data.responseJSON && data.responseJSON.success === false) {
+                layer.alert(data.responseJSON.msg);
+            }
+        }).always(function () {
+            layer.close(index);
+        });
+        return false;
+    });
+
     upload.render({
         elem: '#account-avatar',
         url: '/account/updateAvatar',
@@ -101,116 +124,6 @@ layui.use(["table", "form", "upload", "layer", "element"], function () {
             console.log(res);
         }
     });
-
-    if (typeof (editormd) !== "undefined") {
-        let editorDefaultConfig = {};
-        for (let item in editormd.defaults) {
-            if (editormd.defaults.hasOwnProperty(item)) {
-                editorDefaultConfig[item] = editormd.defaults[item];
-            }
-        }
-
-        let footerEditor = null;
-        let friendshipEditor = null;
-        const cdnBaseAddress = document.head.querySelector("meta[name=cdn-base-address]").content;
-        element.on('tab(accountTab)', function (data) {
-            //页脚内容
-            $("#footer-submit").addClass("layui-btn-disabled").attr("disabled", "disabled");
-            $("#friendship-submit").addClass("layui-btn-disabled").attr("disabled", "disabled");
-            if (data.index === 5) {
-                let setting = {
-                    width: "100%",
-                    height: "450px",
-                    watch: false,
-                    toolbar: false,
-                    codeFold: true,
-                    searchReplace: true,
-                    placeholder: "请输入页脚内容",
-                    value: $("#footer-content").val(),
-                    theme: "default",
-                    mode: "text/html",
-                    path: `${cdnBaseAddress}/lib/editor.md/lib/`,
-                    onload: function () {
-                        $("#footer-submit").removeClass("layui-btn-disabled").removeAttr("disabled");
-                        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                            this.setTheme("dark");
-                            this.setEditorTheme("blackboard");
-                            this.setPreviewTheme("dark");
-                        }
-                    }
-                };
-                let option = $.extend(true, {}, editorDefaultConfig, setting);
-                footerEditor = editormd("footer-editor", option);
-            } else if (data.index === 6) {
-                //友情连接
-                let setting = {
-                    width: "100%",
-                    height: "450px",
-                    watch: false,
-                    toolbar: false,
-                    codeFold: true,
-                    searchReplace: true,
-                    placeholder: "请输入友情链接",
-                    value: $("#friendship-content").val(),
-                    theme: "default",
-                    mode: "text/html",
-                    path: `${cdnBaseAddress}/lib/editor.md/lib/`,
-                    onload: function () {
-                        $("#friendship-submit").removeClass("layui-btn-disabled").removeAttr("disabled");
-                        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                            this.setTheme("dark");
-                            this.setEditorTheme("blackboard");
-                            this.setPreviewTheme("dark");
-                        }
-                    }
-                };
-                let option = $.extend(true, {}, editorDefaultConfig, setting);
-                friendshipEditor = editormd("friendship-editor", option);
-            }
-        });
-        $(document).delegate("#footer-submit", "click", function () {
-            let footerContent = footerEditor.getValue();
-            let index = layer.load(1);
-            $.ajax({
-                url: "/account/SaveFooter",
-                type: "post",
-                data: {content: footerContent}
-            }).done(function (result) {
-                if (!result.success) {
-                    layer.msg(result.msg, {icon: 2, anim: 6});
-                    return;
-                }
-                layer.msg("页脚内容更新成功！");
-            }).fail(function (data) {
-                if (data && data.responseJSON && data.responseJSON.success === false) {
-                    layer.alert(data.responseJSON.msg);
-                }
-            }).always(function () {
-                layer.close(index);
-            });
-        });
-        $(document).delegate("#friendship-submit", "click", function () {
-            let friendshipContent = friendshipEditor.getValue();
-            let index = layer.load(1);
-            $.ajax({
-                url: "/account/SaveFriendship",
-                type: "post",
-                data: {content: friendshipContent}
-            }).done(function (result) {
-                if (!result.success) {
-                    layer.msg(result.msg, {icon: 2, anim: 6});
-                    return;
-                }
-                layer.msg("友情链接更新成功！");
-            }).fail(function (data) {
-                if (data && data.responseJSON && data.responseJSON.success === false) {
-                    layer.alert(data.responseJSON.msg);
-                }
-            }).always(function () {
-                layer.close(index);
-            });
-        });
-    }
 
 
     // 预览
