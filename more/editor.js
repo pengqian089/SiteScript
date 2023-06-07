@@ -9,7 +9,7 @@ var aceEditor = {
 
         aceEditor.editor.session.setMode(`ace/mode/${language}`);
         aceEditor.editor.setValue(value, -1);
-        aceEditor.editor.session.setUseWrapMode(true);
+        //aceEditor.editor.session.setUseWrapMode(true);
         aceEditor.editor.session.setTabSize(4);
         aceEditor.editor.session.setUseSoftTabs(true);
         aceEditor.editor.setShowPrintMargin(false);
