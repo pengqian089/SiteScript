@@ -29,4 +29,8 @@ $inputParameters = [System.String]::Join(" ", $jsPaths)
 
 $execute = "uglifyjs $inputParameters --source-map `"url='site.min.js.map',base='./'`" -o ./site.min.js -c -m"
 
+$execute2 = "uglifyjs ./core/music.js --source-map `"url='music.min.js.map',base='./core'`" -o ./core/music.min.js -c -m"
+
 Invoke-Expression $execute
+
+Invoke-Expression $execute2
