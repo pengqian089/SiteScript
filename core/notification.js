@@ -3,7 +3,10 @@
 (async function () {
     let connection = new signalR
         .HubConnectionBuilder()
-        .withUrl("/notification")
+        .withUrl("/notification",options => {
+            options.skipNegotiation = true;
+            options.transport = signalR.HttpTransportType.WebSockets;
+        })
         .withAutomaticReconnect()
         .build();
 
@@ -14,9 +17,9 @@
         console.error(error);
     }
 
-    connection.on("pushMessage", function (result) {
+    connection.on("pushMessage", async function (result) {
         let option = {title: "小喇叭开始广播辣", content: result.markdown};
-        let ntf = showNotify(option);
+        let ntf = await showNotify(option);
         if (ntf !== null) {
             ntf.onclick = function () {
                 window.open("/talk.html");
@@ -102,18 +105,21 @@
     });
 })();
 
-function showNotify(option) {
+async function showNotify(option) {
+    if (!("Notification" in window)) {
+        return null;
+    }
+
+    let permission = await Notification.requestPermission();
+
     let setting = {
         title: "",
         content: "",
         image: "https://cdn.dpangzi.com/logo.png"
     };
     $.extend(setting, option);
-    if (!("Notification" in window)) {
-        return null;
-    }
 
-    if (Notification.permission === "granted") {
+    if (permission === "granted") {
         return new Notification(setting.title, {
             icon: setting.image,
             body: setting.content,
