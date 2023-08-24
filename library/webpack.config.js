@@ -14,8 +14,8 @@ module.exports = (env) => {
                 type: "umd"
             }
         },
-        // externals: [
-        //     /^artplayer.+$/
-        // ],
+        externals: [
+            /^artplayer.+$/
+        ],
     }
 };
