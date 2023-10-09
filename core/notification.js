@@ -3,10 +3,12 @@
 (async function () {
     let connection = new signalR
         .HubConnectionBuilder()
-        .withUrl("/notification",options => {
-            options.skipNegotiation = true;
-            options.transport = signalR.HttpTransportType.WebSockets;
-        })
+        .withUrl("/notification",
+             {
+                skipNegotiation : true,
+                transport : signalR.HttpTransportType.WebSockets,
+            }
+        )
         .withAutomaticReconnect()
         .build();
 

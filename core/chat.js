@@ -54,7 +54,7 @@ layui.config({
         async function (value) {
             try {
                 const formData = new FormData();
-                formData.append("sign",value);
+                formData.append("sign", value);
                 const response = await fetch("/Account/UpdateSign", {
                     method: "POST",
                     body: formData
@@ -70,10 +70,12 @@ layui.config({
 
     let chatConnection = new signalR
         .HubConnectionBuilder()
-        .withUrl("/chathub", options => {
-            options.skipNegotiation = true;
-            options.transport = signalR.HttpTransportType.WebSockets;
-        })
+        .withUrl("/chathub",
+            {
+                skipNegotiation : true,
+                transport : signalR.HttpTransportType.WebSockets,
+            }
+        )
         .withAutomaticReconnect()
         .build();
     try {
@@ -113,7 +115,7 @@ layui.config({
             } else if (data.to.type === "group") {
                 await chatConnection.invoke("SendMessageToGroup", data.to.id, data.mine.content);
             }
-        }catch (invokeError){
+        } catch (invokeError) {
             console.error(invokeError);
         }
     });
