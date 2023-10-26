@@ -273,14 +273,17 @@ async function sendDanmaku(danmaku, id) {
 async function initFetchContent() {
     let fetchContents = document.querySelectorAll("[data-request]");
     for (let item of fetchContents) {
+        let loaded = item.dataset["status"];
+        if(loaded === "loaded"){
+            continue;
+        }
         let response = await fetch(item.dataset.request, {
             method: 'GET'
         });
-        response.text().then(x => {
-            item.innerHTML = x;
-            $("time.timeago").relativeTime();
-            lightCode();
-        });
+        item.dataset["status"] = "loaded";
+        item.innerHTML = await response.text();
+        $("time.timeago").relativeTime();
+        lightCode();
     }
 }
 

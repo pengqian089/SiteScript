@@ -1,23 +1,46 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
+import {createRouter, createWebHashHistory} from 'vue-router';
+import SettingsView from '../views/SettingsView.vue';
+import ArticleView from "../views/ArticleView.vue";
+import MumbleView from "../views/MumbleView.vue";
+import TimelineView from "../views/TimelineView.vue";
+
 
 const router = createRouter({
-  history: createWebHashHistory(),
-  routes: [
-    {
-      path: '/',
-      name: 'home',
-      component: HomeView
-    },
-    {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AboutView.vue')
-    }
-  ]
+    history: createWebHashHistory(),
+    routes: [
+        {
+            path: '/',
+            name: 'home',
+            component: SettingsView,
+            meta: {
+                title: "基本设置"
+            }
+        },
+        {
+            path: '/article',
+            name: 'article',
+            component: ArticleView,
+            meta: {
+                title: "我的文章列表"
+            }
+        },
+        {
+            path: '/mumble',
+            name: 'mumble',
+            component: MumbleView,
+            meta: {
+                title: "我的碎碎念列表"
+            }
+        },
+        {
+            path: '/timeline',
+            name: 'timeline',
+            component: TimelineView,
+            meta: {
+                title: "我的时间轴列表"
+            }
+        },
+    ]
 })
 
 export default router
