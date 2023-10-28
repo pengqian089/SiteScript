@@ -3,6 +3,7 @@ import SettingsView from '../views/SettingsView.vue';
 import ArticleView from "../views/ArticleView.vue";
 import MumbleView from "../views/MumbleView.vue";
 import TimelineView from "../views/TimelineView.vue";
+import EditArticleView from "@/views/EditArticleView.vue";
 
 
 const router = createRouter({
@@ -22,6 +23,14 @@ const router = createRouter({
             component: ArticleView,
             meta: {
                 title: "我的文章列表"
+            }
+        },
+        {
+            path: '/article/edit/:id',
+            name: "edit-article",
+            component: EditArticleView,
+            meta: {
+                title: "编辑文章"
             }
         },
         {

@@ -1,5 +1,3 @@
-import './assets/main.css'
-
 import {createApp} from 'vue'
 import {createPinia} from 'pinia'
 // Vuetify
@@ -36,6 +34,10 @@ app.use(VuetifyNotifier, {
         defaultColor: 'primary',
         closeIcon: 'mdi-close',
     },
+    dialogOptions:{
+        primaryButtonText: '确定',
+        secondaryButtonText: '取消',
+    }
 });
 app.use(createPinia());
 app.use(router);
