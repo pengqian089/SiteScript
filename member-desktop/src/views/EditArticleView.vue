@@ -43,12 +43,10 @@ export default {
     const {params} = useRoute();
     await this.loadTags();
     let id = params.id;
-    if (_.isEmpty(id)) {
-      this.warning("缺失参数");
-      return;
+    if (!_.isEmpty(id)) {
+      this.id = id;
+      await this.loadArticle();
     }
-    this.id = id;
-    await this.loadArticle();
     this.loading = false;
   },
   methods: {

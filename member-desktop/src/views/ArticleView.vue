@@ -5,7 +5,7 @@ import {
   VDataTableVirtual,
 } from "vuetify/labs/VDataTable";
 import {host, handleResponse, getToken} from "../../common";
-import {useRouter} from 'vue-router';
+import {useRoute, useRouter} from 'vue-router';
 import dayjs from "dayjs";
 import {useNotifier} from "vuetify-notifier";
 
@@ -13,14 +13,13 @@ export default {
   components: {
     VDataTable,
     VDataTableServer,
-    VDataTableVirtual,
+    VDataTableVirtual
   },
   data: () => ({
     router: useRouter(),
     notifier: useNotifier(),
     headers: [
       {title: "标题", align: "start", sortable: false, key: "title"},
-      {title: "预览", align: "start", sortable: false, key: "preview"},
       {title: "查看量", align: "start", sortable: false, key: "viewCount"},
       {title: "标签", align: "start", sortable: false, key: "tags"},
       {title: "回复量", align: "start", sortable: false, key: "commentCount"},
@@ -39,9 +38,13 @@ export default {
     pageSize: 20,
     title: "",
     tag: "",
+    tags: [],
     loading: true,
     host: host
   }),
+  async mounted() {
+    await this.loadTags();
+  },
   methods: {
     /**
      * 加载文章列表
@@ -80,7 +83,7 @@ export default {
       let response = await fetch(`${host}/Article/Delete`, {
         method: "post",
         body: formData,
-        headers:{
+        headers: {
           "Authorization": `Bearer ${getToken()}`,
         }
       });
@@ -88,7 +91,24 @@ export default {
       await handleResponse(response, () => that.showDelete = false);
       this.showDelete = false;
       await this.loadArticles({page: 1, itemsPerPage: this.pageSize});
-    }
+    },
+    /**
+     * 加载标签选项
+     * */
+    async loadTags() {
+      let response = await fetch(`${host}/Article/Tags`, {
+        headers: {"Authorization": `Bearer ${getToken()}`}
+      });
+      this.tags = await handleResponse(response);
+    },
+    async reset() {
+      this.tag = "";
+      this.title = "";
+      await this.loadArticles({page: 1, itemsPerPage: this.pageSize});
+    },
+    publish() {
+      this.router.push({name: `edit-article`});
+    },
   }
 }
 </script>
@@ -107,13 +127,35 @@ export default {
       loading-text="加载中..."
       page-text="$vuetify.dataFooter.pageText"
       @update:options="loadArticles">
+    <template v-slot:top>
+      <v-toolbar>
+        <v-text-field
+            hide-details
+            label="标题"
+            v-model="title"
+        ></v-text-field>
+        <v-select
+            hide-details
+            v-model="tag"
+            :items="tags"
+            label="标签"
+        ></v-select>
+        <v-spacer></v-spacer>
+
+        <v-btn prepend-icon="mdi-magnify" color="primary" class="me-2"
+               @click="loadArticles({page:1,itemsPerPage:pageSize})">
+          查询
+        </v-btn>
+        <v-btn prepend-icon="mdi-restore" color="primary" class="me-2" @click="reset">
+          重置
+        </v-btn>
+        <v-btn prepend-icon="mdi-new-box" color="primary" class="me-2" @click="publish">
+          发布新文章
+        </v-btn>
+      </v-toolbar>
+    </template>
     <template v-slot:item.title="{item}">
       <a :href="host + '/article/read/' + item.id + '.html'" target="_blank">{{ item.title }}</a>
-    </template>
-    <template v-slot:item.preview="{item}">
-      <v-btn prepend-icon="mdi-eye" color="secondary" size="small" class="me-2">
-        预览
-      </v-btn>
     </template>
     <template v-slot:item.actions="{ item }">
       <v-btn prepend-icon="mdi-pencil" color="primary" size="small" class="me-2" @click="editItem(item)">

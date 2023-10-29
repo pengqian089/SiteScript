@@ -26,7 +26,7 @@ const router = createRouter({
             }
         },
         {
-            path: '/article/edit/:id',
+            path: '/article/edit/:id?',
             name: "edit-article",
             component: EditArticleView,
             meta: {
