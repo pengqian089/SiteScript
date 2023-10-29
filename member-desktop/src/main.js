@@ -34,10 +34,11 @@ app.use(VuetifyNotifier, {
         defaultColor: 'primary',
         closeIcon: 'mdi-close',
     },
-    dialogOptions:{
+    dialogOptions: {
         primaryButtonText: '确定',
         secondaryButtonText: '取消',
-    }
+    },
+    toastProps: {location: "top center"}
 });
 app.use(createPinia());
 app.use(router);

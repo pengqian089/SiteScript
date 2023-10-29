@@ -143,6 +143,9 @@ export default {
     success(message) {
       this.notifier.toastSuccess(message, {toastProps: {location: "top center"}})
     },
+    getTheme(){
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
   }
 }
 </script>
@@ -178,7 +181,7 @@ export default {
           type="checkbox"
       ></v-checkbox>
       <md-editor
-          theme="dark"
+          :theme="getTheme()"
           v-model="article.markdown"
           :toolbars="toolbars"
           @onUploadImg="uploadImage"
