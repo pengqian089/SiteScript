@@ -2,10 +2,11 @@
 import {MdEditor} from "md-editor-v3";
 import "md-editor-v3/lib/style.css";
 import {useRoute, useRouter} from 'vue-router';
-import {getToken, handleResponse, handleUploadResponse, host, toolbars,record,setNotifier} from "../../common";
+import {getToken, handleResponse, handleUploadResponse, host, toolbars, record, setNotifier} from "../../common";
 import {useNotifier} from "vuetify-notifier";
 import _ from "lodash";
 import {VSkeletonLoader} from 'vuetify/labs/VSkeletonLoader';
+import {ref} from "vue";
 
 export default {
   components: {MdEditor, VSkeletonLoader},
@@ -22,7 +23,9 @@ export default {
     btnClear: true,
     btnUpload: true,
     btnStartRecordText: "开始录音",
-    btnPlayText: "试听"
+    btnPlayText: "试听",
+    playIcon: "mdi-play",
+    editorRef : {},
   }),
   async mounted() {
     const {params} = useRoute();
@@ -55,10 +58,11 @@ export default {
       let formData = new FormData();
       formData.append("image", file);
 
-      let response = await fetch("/Talk/Upload",
+      let response = await fetch(`${host}/Talk/Upload`,
           {
             method: "post",
-            body: formData
+            body: formData,
+            headers: {"Authorization": `Bearer ${getToken()}`}
           });
       let url = await handleUploadResponse(response);
       callback([url]);
@@ -82,9 +86,10 @@ export default {
       formData.append("markdown", this.mumble.markdown);
       formData.append("html", this.mumble.htmlContent);
 
-      let response = await fetch("/Talk/Publish", {
+      let response = await fetch(`${host}/Talk/Publish`, {
         method: "post",
-        body: formData
+        body: formData,
+        headers: {"Authorization": `Bearer ${getToken()}`}
       });
       await handleResponse(response);
       this.success("保存成功，正在跳转碎碎念列表");
@@ -108,11 +113,11 @@ export default {
      * */
     async onRecord() {
       let that = this;
-      if(this.btnStartRecordText === "开始录音"){
+      if (this.btnStartRecordText === "开始录音") {
         await record.startRecord(() => {
           that.btnStartRecordText = "结束录音";
         });
-      }else{
+      } else {
         record.endRecord(() => {
           that.btnStartRecord = true;
           that.btnPlay = false;
@@ -125,22 +130,24 @@ export default {
     },
     onTogglePlay() {
       let that = this;
-      if(this.btnPlayText === "试听" || this.btnPlayText === "继续播放"){
-        record.playAudio(() =>{
+      if (this.btnPlayText === "试听" || this.btnPlayText === "继续播放") {
+        record.playAudio(() => {
           that.btnPlayText = "暂停";
           that.btnStartRecord = true;
           that.btnPlay = false;
           that.btnClear = true;
           that.btnUpload = true;
-        },() =>{
+          that.playIcon = "mdi-pause";
+        }, () => {
           that.btnPlayText = "试听";
           that.btnStartRecord = true;
           that.btnPlay = false;
           that.btnClear = false;
           that.btnUpload = false;
+          that.playIcon = "mdi-play";
         });
-      }else{
-        record.pauseAudio(() =>{
+      } else {
+        record.pauseAudio(() => {
           that.btnPlayText = "继续播放";
           that.btnStartRecord = true;
           that.btnPlay = false;
@@ -149,16 +156,16 @@ export default {
         });
       }
     },
-    onClear(){
+    onClear() {
       let that = this;
-      record.clearAudio(() =>{
+      record.clearAudio(() => {
         that.btnStartRecord = false;
         that.btnPlay = true;
         that.btnClear = true;
         that.btnUpload = true;
       });
     },
-    async onUploadAudio(){
+    async onUploadAudio() {
       let that = this;
       let result = await record.uploadAudio(() => {
         that.btnStartRecord = false;
@@ -168,7 +175,7 @@ export default {
       });
 
 
-      this.$refs.editorRef.insert(() => {
+      this.editorRef?.value?.insert(() => {
         return {
           targetValue: `<audio controls src="${result["accessUrl"]}" preload="metadata"></audio>`,
           select: true,
@@ -190,7 +197,7 @@ export default {
         <v-btn :disabled="btnStartRecord" prepend-icon="mdi-radio" color="primary" class="me-2" @click="onRecord">
           {{ btnStartRecordText }}
         </v-btn>
-        <v-btn :disabled="btnPlay" prepend-icon="mdi-play" color="primary" class="me-2" @click="onTogglePlay">
+        <v-btn :disabled="btnPlay" :prepend-icon="playIcon" color="primary" class="me-2" @click="onTogglePlay">
           {{ btnPlayText }}
         </v-btn>
         <v-btn :disabled="btnClear" prepend-icon="mdi-restore" color="primary" class="me-2" @click="onClear">
@@ -210,6 +217,7 @@ export default {
       </md-editor>
       <v-btn
           :loading="publishing"
+          :ref="editorRef"
           color="secondary"
           prepend-icon="mdi-publish"
           class="me-4"

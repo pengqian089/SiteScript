@@ -1,9 +1,9 @@
-import {NotifierSymbol,useNotifier} from "vuetify-notifier";
+import {NotifierSymbol, useNotifier} from "vuetify-notifier";
 import {inject} from "vue";
 
 export const host = "https://localhost:37701";
 
-export function getToken(){
+export function getToken() {
     return localStorage["token"];
 }
 
@@ -43,8 +43,8 @@ function callbackFail(fail) {
 
 let notifier = null;
 
-export function setNotifier(obj){
-    if(notifier == null)
+export function setNotifier(obj) {
+    if (notifier == null)
         notifier = obj;
 }
 
@@ -61,7 +61,7 @@ export function warning(message) {
  * @param {string} message 成功消息
  * */
 export function success(message) {
-    notifier.toastSuccess(message,{toastProps: {location: "top center"}})
+    notifier.toastSuccess(message, {toastProps: {location: "top center"}})
 }
 
 /**
@@ -125,7 +125,7 @@ export const record = {
      * */
     async playAudio(playAction = null, endAction = null) {
         if (audioChunks.length === 0) return;
-        if(audio === null) {
+        if (audio === null) {
             const audioBlob = new Blob(audioChunks);
             const audioUrl = URL.createObjectURL(audioBlob);
             audio = new Audio(audioUrl);
@@ -146,8 +146,8 @@ export const record = {
      * 暂停录音音频
      * @param {function} pauseAction 暂停播放音频回调函数
      * */
-    async pauseAudio(pauseAction = null){
-        if(audio === null){
+    async pauseAudio(pauseAction = null) {
+        if (audio === null) {
             return;
         }
         await audio.pause();
@@ -166,7 +166,7 @@ export const record = {
             mediaRecorder.addEventListener("dataavailable", event => {
                 audioChunks.push(event.data);
             });
-            mediaRecorder.addEventListener("stop",() =>{
+            mediaRecorder.addEventListener("stop", () => {
                 stream.getTracks().forEach(track => {
                     console.log(track);
                     track.stop();
@@ -213,9 +213,10 @@ export const record = {
             const audioBlob = new Blob(audioChunks);
             let form = new FormData();
             form.append("record", audioBlob, `${new Date().getTime()}.wav`);
-            let response = await fetch("/Audio/Upload", {
+            let response = await fetch(`${host}/Audio/Upload`, {
                 method: "post",
-                body: form
+                body: form,
+                headers: {"Authorization": `Bearer ${getToken()}`}
             });
 
             let result = await handleResponse(response);
@@ -223,14 +224,14 @@ export const record = {
                 uploadComplete();
             }
             return Promise.resolve(result);
-        }catch (e){
+        } catch (e) {
             return Promise.reject(e.toString());
         }
     },
-    saveAs(){
+    saveAs() {
         if (audioChunks.length === 0) return Promise.reject("没有获取到音频");
         const audioBlob = new Blob(audioChunks);
-        let url  = URL.createObjectURL(audioBlob);
+        let url = URL.createObjectURL(audioBlob);
         window.open(url);
     }
 };
