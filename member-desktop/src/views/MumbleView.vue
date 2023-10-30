@@ -26,7 +26,7 @@ export default {
       {title: "Html预览", align: "start", sortable: false, key: "htmlContent"},
       {title: "点赞数", align: "start", sortable: false, key: "like"},
       {title: "回复量", align: "start", sortable: false, key: "commentCount"},
-      {title: "创建时间\n", align: "start", sortable: false, key: "createTime"},
+      {title: "创建时间", align: "start", sortable: false, key: "createTime"},
       {title: "最后修改时间", align: "start", sortable: false, key: "lastUpdateTime"},
       {title: "操作", align: "start", sortable: false, key: "actions"},
     ],
@@ -103,7 +103,7 @@ export default {
       await this.loadMumble({page: 1, itemsPerPage: this.pageSize});
     },
     publish() {
-
+      this.router.push({name: `edit-mumble`});
     },
     preview(item) {
       this.htmlPreviewContent = item.markdown;
@@ -175,7 +175,7 @@ export default {
       </v-btn>
     </template>
   </v-data-table-server>
-  <v-dialog v-model="dialog" max-width="50em">
+  <v-dialog v-model="dialog" persistent max-width="50em">
     <v-card>
       <v-card-title>
         <span class="text-h5">HTML预览</span>

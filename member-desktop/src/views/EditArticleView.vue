@@ -1,46 +1,27 @@
 <script>
 import {MdEditor} from "md-editor-v3";
 import "md-editor-v3/lib/style.css";
-import {useRoute,useRouter } from 'vue-router';
-import {getToken, handleResponse, handleUploadResponse, host} from "../../common";
+import {useRoute, useRouter} from 'vue-router';
+import {getToken, handleResponse, handleUploadResponse, host, toolbars,setNotifier} from "../../common";
 import {useNotifier} from "vuetify-notifier";
 import _ from "lodash";
-import { VSkeletonLoader } from 'vuetify/labs/VSkeletonLoader';
+import {VSkeletonLoader} from 'vuetify/labs/VSkeletonLoader';
 
 export default {
-  components: {MdEditor,VSkeletonLoader},
+  components: {MdEditor, VSkeletonLoader},
   data: () => ({
-    router:useRouter(),
+    router: useRouter(),
     id: null,
-    toolbars: [
-      'bold',
-      'underline',
-      'italic',
-      'image',
-      'strikeThrough',
-      '-',
-      'quote',
-      'unorderedList',
-      'orderedList',
-      '-',
-      'codeRow',
-      'code',
-      'link',
-      'table',
-      '=',
-      'prettier',
-      'pageFullscreen',
-      'preview',
-      'catalog',
-    ],
     notifier: useNotifier(),
     article: {},
     tags: [],
     publishing: false,
-    loading: true
+    loading: true,
+    toolbars: toolbars
   }),
   async mounted() {
     const {params} = useRoute();
+    setNotifier(this.notifier);
     await this.loadTags();
     let id = params.id;
     if (!_.isEmpty(id)) {
@@ -143,7 +124,7 @@ export default {
     success(message) {
       this.notifier.toastSuccess(message, {toastProps: {location: "top center"}})
     },
-    getTheme(){
+    getTheme() {
       return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
   }
@@ -151,7 +132,7 @@ export default {
 </script>
 
 <template>
-  <v-skeleton-loader :loading="loading"  type="paragraph" style="width: 100%">
+  <v-skeleton-loader :loading="loading" type="paragraph" style="width: 100%">
     <form @submit.prevent="publish" style="width: 100%">
       <v-text-field
           label="标题"
