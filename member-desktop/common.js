@@ -1,5 +1,4 @@
-import {NotifierSymbol, useNotifier} from "vuetify-notifier";
-import {inject} from "vue";
+import _ from "lodash";
 
 export const host = "https://localhost:37701";
 
@@ -90,6 +89,61 @@ export async function handleUploadResponse(response, callback = null) {
         callbackFail(callback);
         return Promise.reject(e.toString());
     }
+}
+
+/**
+ * 上传
+ * @param {FormData} formData FormData
+ * @param {String} url 请求地址
+ * @param {String} method 请求方法
+ * @param {function(ProgressEvent<XMLHttpRequestEventTarget>)} upload 上传文件回调
+ * @param {function(ProgressEvent<XMLHttpRequestEventTarget>)} download 下载结果回调
+ * @param {function} callback 失败回调函数
+ * */
+export async function uploadAsync({formData, url, method = "POST", upload = null, download = null, callback = null}) {
+    const xhr = new XMLHttpRequest();
+    return await new Promise((resolve, reject) => {
+        if (typeof (upload) === "function") {
+            xhr.upload.addEventListener("progress", (event) => {
+                if (event.lengthComputable) {
+                    //console.log("upload progress:", event.loaded / event.total);
+                    upload(event);
+                }
+            });
+        }
+        if (typeof (download) === "function") {
+            xhr.addEventListener("progress", (event) => {
+                if (event.lengthComputable) {
+                    // console.log("download progress:", event.loaded / event.total);
+                    download(event);
+                }
+            });
+        }
+        xhr.addEventListener("loadend", () => {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                //resolve(xhr.readyState === 4 && xhr.status === 200);
+                let result = JSON.parse(xhr.responseText);
+                if (result.success === 1) {
+                    resolve(result.url);
+                } else {
+                    warning(result.message);
+                    callbackFail(callback);
+                    reject(result.msg);
+                }
+            }else {
+                reject(xhr.responseText);
+            }
+
+
+        });
+        xhr.open(method, `${host}${url}`, true);
+        //xhr.setRequestHeader("Content-Type", "application/octet-stream");
+        let token = getToken();
+        if (!_.isEmpty(token)) {
+            xhr.setRequestHeader("Authorization", `Bearer ${getToken()}`);
+        }
+        xhr.send(formData);
+    });
 }
 
 export const toolbars = [

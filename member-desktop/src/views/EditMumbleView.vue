@@ -1,15 +1,23 @@
 <script>
-import {MdEditor} from "md-editor-v3";
+import {MdEditor,NormalToolbar } from "md-editor-v3";
 import "md-editor-v3/lib/style.css";
 import {useRoute, useRouter} from 'vue-router';
-import {getToken, handleResponse, handleUploadResponse, host, toolbars, record, setNotifier} from "../../common";
+import {
+  getToken,
+  handleResponse,
+  handleUploadResponse,
+  host,
+  toolbars,
+  record,
+  setNotifier,
+  uploadAsync
+} from "../../common";
 import {useNotifier} from "vuetify-notifier";
 import _ from "lodash";
 import {VSkeletonLoader} from 'vuetify/labs/VSkeletonLoader';
-import {ref} from "vue";
 
 export default {
-  components: {MdEditor, VSkeletonLoader},
+  components: {MdEditor, VSkeletonLoader,NormalToolbar},
   data: () => ({
     router: useRouter(),
     id: null,
@@ -25,10 +33,10 @@ export default {
     btnStartRecordText: "开始录音",
     btnPlayText: "试听",
     playIcon: "mdi-play",
-    editorRef : {},
   }),
   async mounted() {
     const {params} = useRoute();
+    this.toolbars.push("test");
     setNotifier(this.notifier);
     let id = params.id;
     if (!_.isEmpty(id)) {
@@ -58,13 +66,30 @@ export default {
       let formData = new FormData();
       formData.append("image", file);
 
-      let response = await fetch(`${host}/Talk/Upload`,
-          {
-            method: "post",
-            body: formData,
-            headers: {"Authorization": `Bearer ${getToken()}`}
+      // let response = await fetch(`${host}/Talk/Upload`,
+      //     {
+      //       method: "post",
+      //       body: formData,
+      //       headers: {"Authorization": `Bearer ${getToken()}`}
+      //     });
+      // let url = await handleUploadResponse(response);
+      let that = this;
+      let url = await uploadAsync({
+        formData: formData,
+        url: `/Talk/Upload`,
+        upload: function (event) {
+          console.log("upload progress:", event.loaded / event.total);
+          that.$refs.editorRef?.value?.insert(() => {
+            return {
+              targetValue: `上传进度：${event.loaded / event.total}`,
+              select: true,
+              deviationStart: 0,
+              deviationEnd: 0
+            };
           });
-      let url = await handleUploadResponse(response);
+        },
+      });
+      console.log(url);
       callback([url]);
     },
     onHtmlChanged(html) {
@@ -82,7 +107,8 @@ export default {
       }
 
       let formData = new FormData();
-      formData.append("id", this.id);
+      if (this.mumble.id)
+        formData.append("id", this.mumble.id);
       formData.append("markdown", this.mumble.markdown);
       formData.append("html", this.mumble.htmlContent);
 
@@ -97,7 +123,7 @@ export default {
       await this.router.push({name: "mumble"});
     },
     cancel() {
-      this.router.push({name: "article"});
+      this.router.push({name: "mumble"});
     },
     warning(message) {
       this.notifier.toastWarning(message, {toastProps: {location: "top center"}});
@@ -175,7 +201,7 @@ export default {
       });
 
 
-      this.editorRef?.value?.insert(() => {
+      this.$refs.editorRef?.value?.insert(() => {
         return {
           targetValue: `<audio controls src="${result["accessUrl"]}" preload="metadata"></audio>`,
           select: true,
@@ -209,15 +235,23 @@ export default {
       </v-toolbar>
       <md-editor
           :theme="getTheme()"
+          ref="editorRef"
           v-model="mumble.markdown"
           :toolbars="toolbars"
           @onUploadImg="uploadImage"
-          @onHtmlChanged="onHtmlChanged"
-      >
+          @onHtmlChanged="onHtmlChanged">
+        <template #defToolbars>
+          <normal-toolbar title="test">
+            <template #trigger>
+              <svg class="md-editor-icon" aria-hidden="true">
+                <use xlink:href="#icon-mark"></use>
+              </svg>
+            </template>
+          </normal-toolbar>
+        </template>
       </md-editor>
       <v-btn
           :loading="publishing"
-          :ref="editorRef"
           color="secondary"
           prepend-icon="mdi-publish"
           class="me-4"

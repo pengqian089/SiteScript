@@ -67,16 +67,10 @@ export default {
       this.loading = false;
     },
     /**
-     * 展示碎碎念markdown内容
-     * */
-    showMarkdown(mumble) {
-      mumble.isShowMk = mumble.isShowMk ? !mumble.isShowMk : true;
-    },
-    /**
      * 导航到编辑碎碎念
      * */
     editMumble(mumble) {
-      this.$router.push({name: "edit-mumble", params: {id: mumble.id}});
+      this.router.push({name: "edit-mumble", params: {id: mumble.id}});
     },
     /**
      * 删除碎碎念
@@ -167,7 +161,7 @@ export default {
       </v-btn>
     </template>
     <template v-slot:item.actions="{ item }">
-      <v-btn prepend-icon="mdi-pencil" color="primary" size="small" class="me-2" @click="">
+      <v-btn prepend-icon="mdi-pencil" color="primary" size="small" class="me-2" @click="editMumble(item)">
         编辑
       </v-btn>
       <v-btn prepend-icon="mdi-delete" color="error" size="small" @click="">
