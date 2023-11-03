@@ -4,7 +4,7 @@ import {
   VDataTableServer,
   VDataTableVirtual,
 } from "vuetify/labs/VDataTable";
-import {host, handleResponse, getToken} from "../../common";
+import {host, handleResponse, getToken, fetchGetAsync} from "../../common";
 import {useRoute, useRouter} from 'vue-router';
 import dayjs from "dayjs";
 import {useNotifier} from "vuetify-notifier";
@@ -53,12 +53,15 @@ export default {
       this.pageIndex = page;
       this.pageSize = itemsPerPage;
       this.loading = true;
-      let response = await fetch(`${host}/Article/MyArticle?pageIndex=${this.pageIndex}&pageSize=${this.pageSize}&title=${encodeURIComponent(this.title)}&tag=${encodeURIComponent(this.tag)}`, {
-        headers: {
-          "Authorization": `Bearer ${getToken()}`
-        }
+      let result = await fetchGetAsync({
+        url: "/Article/MyArticle",
+        parameters: [
+          {name: "pageIndex", value: this.pageIndex},
+          {name: "pageSize", value: this.pageSize},
+          {name: "title", value: this.title},
+          {name: "tag", value: this.tag},
+        ]
       });
-      let result = await handleResponse(response);
       for (let item of result.list) {
         item.lastUpdateTime = dayjs(item.lastUpdateTime).format("YYYY年MM月DD日 HH:mm:ss");
         item.createTime = dayjs(item.createTime).format("YYYY年MM月DD日 HH:mm:ss");
@@ -74,7 +77,6 @@ export default {
       this.router.push({name: `edit-article`, params: {id: item.id}});
     },
     async deleteItem(item) {
-      //await Dialog.confirm({title: "提示", message: `删除后不可恢复，确定要删除《${item.title}》吗？`});
       let result = await this.notifier.confirm(`删除后不可恢复，确定要删除《${item.title}》吗？`);
       if (result !== true) return;
       this.showDelete = true;

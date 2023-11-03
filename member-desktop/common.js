@@ -130,7 +130,7 @@ export async function uploadAsync({formData, url, method = "POST", upload = null
                     callbackFail(callback);
                     reject(result.msg);
                 }
-            }else {
+            } else {
                 reject(xhr.responseText);
             }
 
@@ -289,3 +289,23 @@ export const record = {
         window.open(url);
     }
 };
+
+/**
+ * fetch request
+ * @param {String} url 不包含host的url
+ * @param {Array<{name,value}>} parameters 请求参数对象
+ * @param {function} callback 返回预期的返回值的回调
+ * */
+export async function fetchGetAsync({url, parameters = null, callback = null}) {
+    let parametersValue = [];
+    if (parameters != null) {
+        for (const item of parameters) {
+            parametersValue.push(`${item.name}=${encodeURIComponent(item.value)}`)
+        }
+    }
+    let uri = `${host}${url}${(parametersValue.length === 0 ? "" : "?" + parametersValue.join("&"))}`;
+    let response = await fetch(uri,{
+        headers: {"Authorization": `Bearer ${getToken()}`}
+    });
+    return await handleResponse(response, callback);
+}
