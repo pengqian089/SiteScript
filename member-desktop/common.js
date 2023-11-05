@@ -291,7 +291,7 @@ export const record = {
 };
 
 /**
- * fetch request
+ * fetch get request
  * @param {String} url 不包含host的url
  * @param {Array<{name,value}>} parameters 请求参数对象
  * @param {function} callback 返回预期的返回值的回调
@@ -304,8 +304,34 @@ export async function fetchGetAsync({url, parameters = null, callback = null}) {
         }
     }
     let uri = `${host}${url}${(parametersValue.length === 0 ? "" : "?" + parametersValue.join("&"))}`;
-    let response = await fetch(uri,{
-        headers: {"Authorization": `Bearer ${getToken()}`}
-    });
+    let init = {};
+    let token = getToken();
+    if (!_.isEmpty(token)) {
+        init.headers = {"Authorization": `Bearer ${token}`};
+    }
+    let response = await fetch(uri, init);
+    return await handleResponse(response, callback);
+}
+
+/**
+ * fetch post request
+ * @param {String} url post request url
+ * @param {FormData} formData request from data
+ * @param {function} callback success callback
+ * */
+export async function fetchPostAsync({url, formData = null, callback = null}) {
+    if (formData == null) {
+        formData = new FormData();
+    }
+    let uri = `${host}${url}`;
+    let init = {
+        method: "post",
+        body: formData
+    };
+    let token = getToken();
+    if (!_.isEmpty(token)) {
+        init.headers = {"Authorization": `Bearer ${token}`};
+    }
+    let response = await fetch(uri, init);
     return await handleResponse(response, callback);
 }

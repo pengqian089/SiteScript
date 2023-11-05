@@ -1,5 +1,5 @@
 <script>
-import {setNotifier, success, handleResponse, warning, fetchGetAsync} from "../../common";
+import {setNotifier, success, handleResponse, warning, fetchGetAsync, fetchPostAsync} from "../../common";
 import {useNotifier} from "vuetify-notifier";
 import _ from "lodash";
 import {VSkeletonLoader} from 'vuetify/labs/VSkeletonLoader';
@@ -41,16 +41,21 @@ export default {
       }
       let formData = new FormData();
       for (let item in this.userInfo) {
-        formData.append(item, values[item]);
+        formData.append(item, this.userInfo[item]);
       }
-      return;
       this.saving = true;
-      let response = await fetch("/account/UpdateInfo", {
-        method: "post",
-        body: formData
+      // let response = await fetch("/account/UpdateInfo", {
+      //   method: "post",
+      //   body: formData
+      // });
+
+      // let that = this;
+      //await handleResponse(response, () => that.saving = false);
+      await fetchPostAsync({
+        url: "/account/UpdateInfo",
+        formData: formData
       });
-      let that = this;
-      await handleResponse(response, () => that.saving = false);
+
       success("信息更新成功");
       this.saving = false;
     },

@@ -79,9 +79,11 @@ export default {
         url: `/Talk/Upload`,
         upload: function (event) {
           console.log("upload progress:", event.loaded / event.total);
-          that.$refs.editorRef?.value?.insert(() => {
+          let progress = event.loaded / event.total;
+          let message = progress === 1 ? "上传完毕，正在处理..." : `上传进度：${event.loaded / event.total}`;
+          that.$refs.editorRef?.insert(() => {
             return {
-              targetValue: `上传进度：${event.loaded / event.total}`,
+              targetValue: message,
               select: true,
               deviationStart: 0,
               deviationEnd: 0
@@ -201,7 +203,7 @@ export default {
       });
 
 
-      this.$refs.editorRef?.value?.insert(() => {
+      this.$refs.editorRef?.insert(() => {
         return {
           targetValue: `<audio controls src="${result["accessUrl"]}" preload="metadata"></audio>`,
           select: true,
@@ -211,6 +213,16 @@ export default {
       });
 
       console.log(result);
+    },
+    testInsetEditor(){
+      this.$refs.editorRef?.insert(() => {
+        return {
+          targetValue: `test,test`,
+          select: true,
+          deviationStart: 0,
+          deviationEnd: 0
+        };
+      });
     }
   }
 }
@@ -232,6 +244,10 @@ export default {
         <v-btn :disabled="btnUpload" prepend-icon="mdi-cloud" color="primary" class="me-2" @click="onUploadAudio">
           上传录音
         </v-btn>
+
+<!--        <v-btn @click="testInsetEditor">-->
+<!--          test-->
+<!--        </v-btn>-->
       </v-toolbar>
       <md-editor
           :theme="getTheme()"
