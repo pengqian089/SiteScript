@@ -33,5 +33,5 @@ export default defineConfig({
             key: fs.readFileSync(path.join(__dirname, "cert/localhost.key")),
         },
 
-    }
+    },
 })

@@ -10,11 +10,12 @@ import {
   toolbars,
   record,
   setNotifier,
-  uploadAsync
+  uploadAsync, fetchGetAsync
 } from "../../common";
 import {useNotifier} from "vuetify-notifier";
 import _ from "lodash";
 import {VSkeletonLoader} from 'vuetify/labs/VSkeletonLoader';
+import dayjs from "dayjs";
 
 export default {
   components: {MdEditor, VSkeletonLoader,NormalToolbar},
@@ -22,7 +23,7 @@ export default {
     router: useRouter(),
     id: null,
     notifier: useNotifier(),
-    mumble: {},
+    timeline: {},
     publishing: false,
     loading: true,
     toolbars: toolbars,
@@ -40,16 +41,14 @@ export default {
     let id = params.id;
     if (!_.isEmpty(id)) {
       this.id = id;
-      await this.loadMumble();
+      await this.loadTimeline();
     }
     this.loading = false;
   },
   methods: {
-    async loadMumble() {
-      let response = await fetch(`${host}/Talk/Detail/${this.id}`, {
-        headers: {"Authorization": `Bearer ${getToken()}`}
-      });
-      this.mumble = await handleResponse(response);
+    async loadTimeline() {
+      this.timeline = fetchGetAsync({url: `/Timeline/Detail/${this.id}`});
+      this.timeline.date = dayjs(this.timeline.date).format("YYYY/MM/DD");
     },
     async uploadImage(files, callback) {
       if (files.length <= 0) {
@@ -87,33 +86,6 @@ export default {
     },
     onHtmlChanged(html) {
       this.mumble.htmlContent = html;
-    },
-    async publish() {
-      this.publishing = false;
-      if (_.isEmpty(this.mumble.markdown)) {
-        this.warning("请输入碎碎念正文");
-        return;
-      }
-      if (_.isEmpty(this.mumble.htmlContent)) {
-        this.warning("没有检测到正文");
-        return;
-      }
-
-      let formData = new FormData();
-      if (this.mumble.id)
-        formData.append("id", this.mumble.id);
-      formData.append("markdown", this.mumble.markdown);
-      formData.append("html", this.mumble.htmlContent);
-
-      let response = await fetch(`${host}/Talk/Publish`, {
-        method: "post",
-        body: formData,
-        headers: {"Authorization": `Bearer ${getToken()}`}
-      });
-      await handleResponse(response);
-      this.success("保存成功，正在跳转碎碎念列表");
-      this.publishing = false;
-      await this.router.push({name: "mumble"});
     },
     cancel() {
       this.router.push({name: "mumble"});
@@ -205,18 +177,12 @@ export default {
 
       console.log(result);
     },
-    testInsetEditor(){
-      this.$refs.editorRef?.insert(() => {
-        return {
-          targetValue: `test,test`,
-          select: true,
-          deviationStart: 0,
-          deviationEnd: 0
-        };
-      });
+    async publish(){
+
     }
   }
 }
+
 </script>
 
 <template>
@@ -236,26 +202,17 @@ export default {
           上传录音
         </v-btn>
 
-<!--        <v-btn @click="testInsetEditor">-->
-<!--          test-->
-<!--        </v-btn>-->
+        <!--        <v-btn @click="testInsetEditor">-->
+        <!--          test-->
+        <!--        </v-btn>-->
       </v-toolbar>
       <md-editor
           :theme="getTheme()"
           ref="editorRef"
-          v-model="mumble.markdown"
+          v-model="timeline.content"
           :toolbars="toolbars"
           @onUploadImg="uploadImage"
           @onHtmlChanged="onHtmlChanged">
-        <template #defToolbars>
-          <normal-toolbar title="test">
-            <template #trigger>
-              <svg class="md-editor-icon" aria-hidden="true">
-                <use xlink:href="#icon-mark"></use>
-              </svg>
-            </template>
-          </normal-toolbar>
-        </template>
       </md-editor>
       <v-btn
           :loading="publishing"
