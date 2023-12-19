@@ -107,6 +107,37 @@
     });
 })();
 
+(async () => {
+    let appConnection = new signalR
+        .HubConnectionBuilder()
+        .withUrl("/app/notification",
+            {
+                skipNegotiation : true,
+                transport : signalR.HttpTransportType.WebSockets,
+            }
+        )
+        .withAutomaticReconnect()
+        .build();
+
+    try {
+        await appConnection.start();
+    } catch (error) {
+        console.error(error);
+    }
+    appConnection.on("systemMessage", function (level, message) {
+        if (level === 0) {
+            outPutSuccess(message);
+            $.notify(message, "success");
+        } else if (level === 1) {
+            outPutInfo(message);
+            $.notify(message, "warn");
+        } else if (level === 2) {
+            outPutError(message);
+            $.notify(message, "error");
+        }
+    });
+})();
+
 async function showNotify(option) {
     if (!("Notification" in window)) {
         return null;
