@@ -27,5 +27,6 @@
     <orderEntry type="library" name="nplayer-danmaku" level="project" />
     <orderEntry type="library" name="ace" level="project" />
     <orderEntry type="library" name="amplitudejs" level="project" />
+    <orderEntry type="library" name="music-player" level="project" />
   </component>
 </module>

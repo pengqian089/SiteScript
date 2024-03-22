@@ -19,7 +19,7 @@ const dpzOption = {
 (async function () {
     let userResponse = await fetch("/account/GetUserInfo");
     let userResult = await userResponse.json();
-    if(userResult["success"]){
+    if (userResult["success"]) {
         $(".blog-user")
             .attr("href", "/account")
             .find("img")
@@ -84,18 +84,47 @@ const dpzOption = {
 
     $(document).delegate("[title]", "touchend", function () {
         let title = $(this).attr("title");
-        layer.tips(title, this, { tips: 3 });
+        layer.tips(title, this, {tips: 3});
     });
 
-    const ap = new APlayer({
-        container: document.getElementById("aplayer"),
-        lrcType: 3,
-        fixed: true
-    });
+    // $(document).delegate("[title]", "touchstart", function () {
+    //     let current = $(this);
+    //     setTimeout(() => {
+    //         current.touchend(() => {
+    //             let title = $(this).attr("title");
+    //             layer.tips(title, this, {tips: 3});
+    //         });
+    //     }, 1000);
+    //
+    // });
 
-    let musicResponse = await fetch("/Music/Recommend");
-    let musicResult = await musicResponse.json();
-    ap.list.add(musicResult);
+    // const ap = new APlayer({
+    //     container: document.getElementById("aplayer"),
+    //     lrcType: 3,
+    //     fixed: true
+    // });
+
+    let musicResponse = await fetch("/Music/Recommend/v2");
+    let musics = await musicResponse.json();
+
+    ReactJkMusicPlayer.defaultProps.quietUpdate = true;
+    ReactJkMusicPlayer.defaultProps.locale = "zh_CN";
+    ReactJkMusicPlayer.defaultProps.defaultPosition = {bottom: 0, left: 0};
+    ReactJkMusicPlayer.defaultProps.preload = true;
+    ReactJkMusicPlayer.defaultProps.glassBg = true;
+    ReactJkMusicPlayer.defaultProps.autoPlay = false;
+    ReactJkMusicPlayer.defaultProps.remove = false;
+    ReactJkMusicPlayer.defaultProps.showMiniProcessBar = true;
+    ReactJkMusicPlayer.defaultProps.showDownload = false;
+    ReactJkMusicPlayer.defaultProps.showLyric = true;
+    ReactJkMusicPlayer.defaultProps.showMediaSession = true;
+    ReactJkMusicPlayer.defaultProps.showDestroy = false;
+    ReactJkMusicPlayer.defaultProps.volumeFade = {fadeIn: 300, fadeOut: 300};
+    ReactJkMusicPlayer.defaultProps.audioLists = musics;
+    ReactDOM.render(
+        React.createElement(ReactJkMusicPlayer),
+        document.getElementById('music-player'),
+    )
 
     let throttleTimer = null;
     let throttleDelay = 100;
@@ -110,9 +139,9 @@ const dpzOption = {
         throttleTimer = setTimeout(function () {
             // 顶部菜单是否开启高斯模糊
             if (window.scrollY > 0) {
-                $(".blog-nav").css({ "background-color": "rgba(57,61,73,.5)", "backdrop-filter": "blur(25px)" });
+                $(".blog-nav").css({"background-color": "rgba(57,61,73,.5)", "backdrop-filter": "blur(25px)"});
             } else if (window.scrollY === 0) {
-                $(".blog-nav").css({ "background-color": "rgb(57,61,73)", "backdrop-filter": "none" })
+                $(".blog-nav").css({"background-color": "rgb(57,61,73)", "backdrop-filter": "none"})
             }
 
         }, throttleDelay);
