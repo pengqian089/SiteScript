@@ -3,16 +3,12 @@ layui.config({
     layimAssetsPath: `${dpzOption.CDNBaseAddress}/lib/layim/layim-assets/`,
 }).extend({
     layim: layui.cache.layimPath + 'layim'
-}).use(["layim", "layer"], function () {
-    if (layui.device().mobile === true){
+}).use(["layim", "layer"], async function () {
+    if (layui.device().mobile === true) {
         return;
     }
     let layim = layui.layim,
         layer = layui.layer;
-    let chatConnection = new signalR.HubConnectionBuilder().withUrl("/chathub").withAutomaticReconnect().build();
-    chatConnection.start().catch(function (err) {
-        return console.error(err.toString());
-    });
 
     layim.config({
         title: "聊天室",
@@ -25,7 +21,7 @@ layui.config({
             url: "/chat/init",
             data: {}
         },
-        min:true,
+        min: true,
         // 群成员接口
         members: {
             url: "/chat/groupMembers",
@@ -53,24 +49,49 @@ layui.config({
                     insert("[pre class=layui-code]" + text + "[/pre]");
                 });
         });
+
     layim.on("sign",
-        function (value) {
-            console.log(value);
-            $.ajax({url: "/Account/UpdateSign", type: "post", data: {sign: value}}).done(function (result) {
+        async function (value) {
+            try {
+                const formData = new FormData();
+                formData.append("sign", value);
+                const response = await fetch("/Account/UpdateSign", {
+                    method: "POST",
+                    body: formData
+                });
+                const result = await response.json();
                 if (!result.success) {
                     layer.msg(result.msg);
                 }
-            }).fail(function (res) {
-                console.info(res);
-            });
+            } catch (fetchError) {
+                console.error(fetchError);
+            }
         });
+
+    let chatConnection = new signalR
+        .HubConnectionBuilder()
+        .withUrl("/chathub",
+            {
+                skipNegotiation : true,
+                transport : signalR.HttpTransportType.WebSockets,
+            }
+        )
+        .withAutomaticReconnect()
+        .build();
+    try {
+        await chatConnection.start();
+    } catch (e) {
+        console.error(e);
+    }
+
     chatConnection.on("ReceiveMessage", function (res) {
         res["timestamp"] = res["timestamp"] * 1000;
         layim.getMessage(res);
     });
     chatConnection.on("System", function (res) {
         if (res.code < 0) {
-            console.log("%cchatHub:" + res.content, "color:#ff00ff");
+            //console.log("%cchatHub:" + res.content, "color:#ff00ff");
+            outPutError(res.content);
             chatConnection.stop();
         } else if (res.code === 0 && !res.isGuest) {
             layer.msg(`${res.user.name}下线了`);
@@ -80,22 +101,22 @@ layui.config({
             layim.setFriendStatus(res.user.id, "online");
         }
     });
-    layim.on("sendMessage", function (data) {
+    layim.on("sendMessage", async function (data) {
         // if (data.to.type === "friend") {
         //     layim.setChatStatus('<span style="color:#FF5722;">对方正在输入。。。</span>');
         // }
-        if (data.to.id === "kefu") {
-            // robotConnection.invoke("SendMessage", data.mine.content).catch(function (err) {
-            //     return console.error(err.toString());
-            // });
-        } else if (data.to.type === "friend") {
-            chatConnection.invoke("SendMessageToUser", data.to.id, data.mine.content).catch(function (err) {
-                return console.error(err.toString());
-            });
-        } else if (data.to.type === "group") {
-            chatConnection.invoke("SendMessageToGroup", data.to.id, data.mine.content).catch(function (err) {
-                return console.error(err.toString());
-            });
+        try {
+            if (data.to.id === "kefu") {
+                // robotConnection.invoke("SendMessage", data.mine.content).catch(function (err) {
+                //     return console.error(err.toString());
+                // });
+            } else if (data.to.type === "friend") {
+                await chatConnection.invoke("SendMessageToUser", data.to.id, data.mine.content);
+            } else if (data.to.type === "group") {
+                await chatConnection.invoke("SendMessageToGroup", data.to.id, data.mine.content);
+            }
+        } catch (invokeError) {
+            console.error(invokeError);
         }
     });
 });
