@@ -82,7 +82,7 @@ const dpzOption = {
     //     layer.tips(tips, this, { tips: 3 });
     // });
 
-    $(document).delegate("[title]", "touchend", function () {
+    $(document).delegate("[title]:not(.react-jinke-music-player-main *)", "touchend", function () {
         let title = $(this).attr("title");
         layer.tips(title, this, {tips: 3});
     });
@@ -120,6 +120,7 @@ const dpzOption = {
     ReactJkMusicPlayer.defaultProps.showMediaSession = true;
     ReactJkMusicPlayer.defaultProps.showDestroy = false;
     ReactJkMusicPlayer.defaultProps.volumeFade = {fadeIn: 300, fadeOut: 300};
+    ReactJkMusicPlayer.defaultProps.sortableOptions =  { disabled: true, forceFallback: true };
     ReactJkMusicPlayer.defaultProps.audioLists = musics;
     ReactDOM.render(
         React.createElement(ReactJkMusicPlayer),
