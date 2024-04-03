@@ -119,6 +119,7 @@ const dpzOption = {
     ReactJkMusicPlayer.defaultProps.showLyric = true;
     ReactJkMusicPlayer.defaultProps.showMediaSession = true;
     ReactJkMusicPlayer.defaultProps.showDestroy = false;
+    ReactJkMusicPlayer.defaultProps.showReload = false;
     ReactJkMusicPlayer.defaultProps.volumeFade = {fadeIn: 300, fadeOut: 300};
     ReactJkMusicPlayer.defaultProps.sortableOptions =  { disabled: true, forceFallback: true };
     ReactJkMusicPlayer.defaultProps.audioLists = musics;
