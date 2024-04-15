@@ -194,8 +194,6 @@ async function initVideoPlayer() {
     const playerElement = document.getElementById(playerId) || document.getElementById(mPlayerId);
 
     if (playerElement !== null) {
-        playerElement.style.marginBottom = "1em";
-        playerElement.style.aspectRatio = "16/9";
         if (videoItems.length === 0) {
             let response = await fetch(`${dpzOption.webApiBaseAddress}/api/Video`, {
                 method: 'GET',
@@ -203,6 +201,8 @@ async function initVideoPlayer() {
                 mode: 'cors'
             });
             videoItems = await response.json();
+            playerElement.style.marginBottom = "1em";
+            playerElement.style.aspectRatio = "16/9";
         }
         let index = Math.floor(Math.random() * videoItems.length);
         videoPlayer(playerElement, videoItems[index]["m3u8"], videoItems[index]["id"]);
