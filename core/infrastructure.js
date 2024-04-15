@@ -201,9 +201,9 @@ async function initVideoPlayer() {
                 mode: 'cors'
             });
             videoItems = await response.json();
-            playerElement.style.marginBottom = "1em";
-            playerElement.style.aspectRatio = "16/9";
         }
+        playerElement.style.marginBottom = "1em";
+        playerElement.style.aspectRatio = "16/9";
         let index = Math.floor(Math.random() * videoItems.length);
         videoPlayer(playerElement, videoItems[index]["m3u8"], videoItems[index]["id"]);
     }
