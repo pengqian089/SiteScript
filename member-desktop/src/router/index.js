@@ -5,6 +5,7 @@ import MumbleView from "../views/MumbleView.vue";
 import TimelineView from "../views/TimelineView.vue";
 import EditArticleView from "../views/EditArticleView.vue";
 import EditMumbleView from "../views/EditMumbleView.vue";
+import DynamicPageListView from "@/views/DynamicPageListView.vue";
 
 
 const router = createRouter({
@@ -56,6 +57,14 @@ const router = createRouter({
             component: TimelineView,
             meta: {
                 title: "我的时间轴列表"
+            }
+        },
+        {
+            path: '/dynamicPages',
+            name: 'dynamic-pages',
+            component: DynamicPageListView,
+            meta: {
+                title: "动态页列表"
             }
         },
     ]

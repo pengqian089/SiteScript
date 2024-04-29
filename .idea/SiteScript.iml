@@ -26,6 +26,5 @@
     <orderEntry type="library" name="nplayer" level="project" />
     <orderEntry type="library" name="nplayer-danmaku" level="project" />
     <orderEntry type="library" name="ace" level="project" />
-    <orderEntry type="library" name="scrollReveal.js" level="project" />
   </component>
 </module>

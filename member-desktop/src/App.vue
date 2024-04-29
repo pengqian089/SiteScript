@@ -15,6 +15,8 @@
         </v-list-item>
         <v-list-item title="时间轴" value="时间轴" prepend-icon="mdi-timeline" to="/timeline">
         </v-list-item>
+        <v-list-item title="动态页" value="动态页" prepend-icon="mdi-xml" to="/dynamicPages">
+        </v-list-item>
       </v-list>
     </v-navigation-drawer>
 
