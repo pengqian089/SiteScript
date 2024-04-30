@@ -6,6 +6,7 @@ import {
 import langZh from "quasar/lang/zh-CN"
 
 export default boot(async ({app, router, store}) => {
+  console.log("default boot");
   app.use(Quasar, {
     //dark: window.matchMedia('(prefers-color-scheme: dark)').matches,
     plugins: {Dialog, Notify},
