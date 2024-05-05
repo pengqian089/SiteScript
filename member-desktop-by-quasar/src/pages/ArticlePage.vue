@@ -1,5 +1,5 @@
 <script>
-import {host, handleResponse, getToken, fetchGetAsync,success} from "../common";
+import {host, handleResponse, getToken, fetchGetAsync, success} from "../common";
 import {useQuasar} from 'quasar';
 import {useRoute, useRouter} from 'vue-router';
 import dayjs from "dayjs";
@@ -12,11 +12,12 @@ export default {
       {label: "标题", align: "center", name: "title", field: "title"},
       {label: "查看量", align: "center", name: "viewCount", field: "viewCount"},
       {label: "标签", align: "center", name: "tags", field: "tags", format: (x) => x.join(";")},
+      {label: "回复量", align: "center", name: "commentCount", field: "commentCount"},
       {
-        label: "回复量",
+        label: "创建时间",
         align: "center",
-        name: "commentCount",
-        field: "commentCount",
+        name: "createTime",
+        field: "createTime",
         format: (x) => dayjs(x).format("YYYY年MM月DD日 HH:mm:ss")
       },
       {
@@ -50,10 +51,7 @@ export default {
      * 加载文章列表
      * */
     async loadArticles(props) {
-      console.log(props);
-      // this.pageIndex = page;
-      // this.pageSize = itemsPerPage;
-      const {page, rowsPerPage} = props.pagination;
+      const {page, rowsPerPage} = props.pagination || {page: 1, rowsPerPage: 15};
       this.loading = true;
       let result = await fetchGetAsync({
         url: "/Article/MyArticle",
@@ -64,10 +62,7 @@ export default {
           {name: "tag", value: this.tag},
         ]
       });
-      // console.log("data", result);
-      // console.log("before", this.rows);
       this.rows.splice(0, this.rows.length, ...result.list);
-      //console.log("after", this.rows);
       this.initialPagination = {
         sortBy: 'desc',
         descending: false,
@@ -116,7 +111,7 @@ export default {
     async reset() {
       this.tag = "";
       this.title = "";
-      await this.loadArticles({page: 1, rowsPerPage: this.pageSize});
+      await this.loadArticles({query: true});
     },
     publish() {
       this.router.push({name: `edit-article`});
@@ -138,16 +133,19 @@ export default {
       v-model:pagination="initialPagination"
     >
       <template v-slot:top>
-        <q-input dense style="width: 300px" v-model="title" placeholder="标题">
+        <q-btn color="primary" flat round dense icon="publish" title="发布新文章" @click="publish"/>
+        <q-space/>
+        <q-input dense style="width: 300px" v-model="title" placeholder="标题" label="标题">
         </q-input>
         <q-select dense style="width: 300px" v-model="tag" label="标签" :options="tags"></q-select>
-        <q-btn color="primary" icon-right="search" label="查询"/>
+        <q-btn color="primary" class="q-ml-md" icon-right="search" label="查询" @click="loadArticles({query:true})"/>
+        <q-btn color="purple" class="q-ml-md" icon-right="restart_alt" label="重置" @click="reset"/>
       </template>
       <template v-slot:body-cell-actions="props">
         <q-td key="id">
           <q-btn color="primary" icon="edit" size="sm" label="编辑" @click="editItem(props.row)"/>
           <span v-if="$q.screen.lt.md" style="display: block;"></span>
-          <span v-else  style="margin-left: 1em"></span>
+          <span v-else style="margin-left: 1em"></span>
           <q-btn color="red" icon="delete" size="sm" label="删除" @click="deleteItem(props.row)"/>
         </q-td>
       </template>

@@ -12,7 +12,6 @@
 const {configure} = require('quasar/wrappers');
 const path = require("path");
 const fs = require("fs");
-const {Dialog} = require("quasar");
 
 
 module.exports = configure(function (/* ctx */) {
@@ -83,7 +82,8 @@ module.exports = configure(function (/* ctx */) {
           "plugins": ["line-numbers", "match-braces"],
           "theme": "okaidia",
           "css": true
-        }, {client: true, server: true}]
+        }, {client: true, server: true}],
+        ["vite-plugin-monaco-editor", {}, {client: true, server: true}]
       ]
     },
 
@@ -114,7 +114,7 @@ module.exports = configure(function (/* ctx */) {
       // directives: [],
 
       // Quasar plugins
-      plugins: ["Dialog","Notify"]
+      plugins: ["Dialog", "Notify"]
     },
 
     // animations: 'all', // --- includes all animations

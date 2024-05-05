@@ -61,13 +61,19 @@ const linksList = [
     title: '基本设置',
     caption: '个人信息设置',
     icon: 'settings',
-    link: '/settings'
+    link: '/'
   },
   {
     title: '文章',
     caption: '文章列表',
     icon: 'article',
     link: '/article'
+  },
+  {
+    title: '动态页',
+    caption: '可以自定义的页面',
+    icon: 'auto_stories',
+    link: '/dynamic-pages'
   },
 ]
 

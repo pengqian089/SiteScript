@@ -17,6 +17,7 @@
     "dayjs": "^1.11.11",
     "lodash": "^4.17.21",
     "md-editor-v3": "^4.13.5",
+    "monaco-editor": "^0.48.0",
     "prismjs": "^1.29.0",
     "quasar": "^2.8.0",
     "vite-plugin-prismjs": "^0.0.11",
@@ -31,7 +32,8 @@
     "eslint-plugin-vue": "^9.0.0",
     "postcss": "^8.4.14",
     "prettier": "^2.5.1",
-    "vite-plugin-checker": "^0.6.4"
+    "vite-plugin-checker": "^0.6.4",
+    "vite-plugin-monaco-editor": "^1.1.0"
   },
   "engines": {
     "node": "^20 || ^18 || ^16",

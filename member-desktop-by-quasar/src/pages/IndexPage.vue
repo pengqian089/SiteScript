@@ -58,6 +58,9 @@ export default defineComponent({
   name: 'IndexPage',
   updated() {
     Prism.highlightAll();
+  },
+  mounted() {
+    Prism.highlightAll();
   }
 });
 </script>
