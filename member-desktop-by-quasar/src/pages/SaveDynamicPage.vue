@@ -1,6 +1,9 @@
 <script>
 import _ from "lodash";
-import * as monaco from 'monaco-editor'
+// import * as monaco from 'monaco-editor';
+import {warning} from '../common'
+import loader from '@monaco-editor/loader';
+import Enumerable from 'linq';
 
 export default {
   data: () => ({
@@ -10,7 +13,7 @@ export default {
     initNumber: 1,
     pageName: null,
     initHtmlContent:
-`<!DOCTYPE html>
+      `<!DOCTYPE html>
 
 <html lang="zh-cn">
     <head>
@@ -22,7 +25,7 @@ export default {
 </html>`,
   }),
   methods: {
-    addTab(icon,label,type,content = ""){
+    addTab(icon, label, type, content = "") {
       let tabName = `tab${this.initNumber}`;
       this.allTabs.push({
         icon: icon,
@@ -31,26 +34,26 @@ export default {
         content: content,
         type: type
       });
-      console.log(document.getElementById(tabName + "_editor"));
       this.initNumber++;
       return tabName;
     },
     addHtml() {
-      return this.addTab('html',`HTML TAB ${this.initNumber}`,1,this.initHtmlContent);
+      return this.addTab('html', `HTML TAB ${this.initNumber}`, 1, this.initHtmlContent);
     },
     addCss() {
-      return this.addTab('css',`CSS TAB ${this.initNumber}`,2);
+      return this.addTab('css', `CSS TAB ${this.initNumber}`, 2);
     },
     addScript() {
-      return this.addTab('javascript',`SCRIPT TAB ${this.initNumber}`,3);
+      return this.addTab('javascript', `SCRIPT TAB ${this.initNumber}`, 3);
     },
     changeTab() {
       for (const item of this.allTabs) {
         if (item.name === this.tab) {
           this.pageName = item.label;
-          return;
+          break;
         }
       }
+      console.log("change tab", document.getElementById(`${this.tab}_editor`));
     },
     changePageName() {
       for (const item of this.allTabs) {
@@ -60,7 +63,7 @@ export default {
         }
       }
     },
-    getTabData(){
+    getTabData() {
       for (const item of this.allTabs) {
         if (item.name === this.tab) {
           this.pageName = item.label;
@@ -68,6 +71,30 @@ export default {
         }
       }
       return null;
+    },
+    setCurrentTabContent(content) {
+      for (const item of this.allTabs) {
+        if (item.name === this.tab) {
+          item.content = content;
+          return;
+        }
+      }
+    },
+    closeTab(tabName) {
+      console.log(tabName);
+      if (this.allTabs.length === 1) {
+        warning("至少要保留一个标签");
+        return;
+      }
+      if (Enumerable.from(this.allTabs).count(x => x.name === tabName && x.type === 1) === 1) {
+        warning("至少要保留一个HTML标签");
+        return;
+      }
+      let index = Enumerable.from(this.allTabs).indexOf(x => x.name === tabName);
+      if (index >= 0) {
+        this.allTabs.splice(index, 1);
+      }
+      console.log(index);
     }
   },
   mounted() {
@@ -77,10 +104,9 @@ export default {
   },
   updated() {
     let elementEditor = document.getElementById(`${this.tab}_editor`);
-    console.log("!_.isEmpty(this.tab) && elementEditor !== null", !_.isEmpty(this.tab), elementEditor !== null, !_.isEmpty(this.tab) && elementEditor !== null);
     if (!_.isEmpty(this.tab) && elementEditor !== null) {
       let {content, type} = this.getTabData();
-      let language = "";
+      let language = "plaintext";
       switch (type) {
         case 1:
           language = "html";
@@ -92,12 +118,23 @@ export default {
           language = "javascript";
           break;
       }
-      let editor = monaco.editor.create(elementEditor, {
-        value: content,
-        language: language,
-        theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? "vs-dark" : "vs",
+      loader.config({
+        'vs/nls': {availableLanguages: {'*': 'zh-cn'}},
+        paths: {vs: 'https://dpangzi.com/scripts/monaco-editor/min/vs'}
       });
-      console.log(editor);
+      loader.init().then(monacoInstance => {
+        let editor = monacoInstance.editor.create(elementEditor, {
+          value: content,
+          language: language,
+          theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? "vs-dark" : "vs",
+        });
+        let that = this;
+        editor.getModel().onDidChangeContent((e) => {
+          let editorContent = editor.getValue();
+          that.setCurrentTabContent(editorContent);
+        });
+      });
+
     }
   }
 }
@@ -122,6 +159,7 @@ export default {
           </q-list>
         </q-menu>
       </q-btn>
+
       <q-space/>
       <q-input dense style="width: 200px" v-model="pageName" placeholder="页面名称" label="页面名称"
                @update:model-value="changePageName">
@@ -129,7 +167,11 @@ export default {
       <q-space/>
 
       <q-tabs v-model="tab" shrink stretch @update:model-value="changeTab">
-        <q-tab v-for="item in allTabs" :key="item.name" :name="item.name" :label="item.label" :icon="item.icon"/>
+        <q-tab v-for="item in allTabs" :key="item.name" :name="item.name" :label="item.label" :icon="item.icon" no-caps>
+          <template v-slot>
+            <q-btn color="primary" flat round dense icon="close" title="关闭当前Tab" @click="closeTab(item.name)"/>
+          </template>
+        </q-tab>
       </q-tabs>
     </q-toolbar>
     <q-tab-panels v-model="tab">
@@ -144,6 +186,11 @@ export default {
 <style scoped>
 .editor {
   width: 100%;
-  height: calc(100vh - 191px);
+  height: calc(100vh - 191px - 24px);
+}
+
+.tab-item {
+  display: flex;
+  flex-wrap: r;
 }
 </style>
