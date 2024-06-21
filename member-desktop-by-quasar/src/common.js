@@ -24,7 +24,7 @@ export async function handleResponse(response, callback = null) {
         return Promise.reject(result.msg);
       }
     } else {
-      warning(response.statusText);
+      warning(`网络请求异常，状态码：${response.status}，内容：${response.statusText}`);
       callbackFail(callback);
       return Promise.reject(response.statusText);
     }
@@ -46,7 +46,7 @@ function callbackFail(fail) {
  * @param {string} message 警告消息
  * */
 export function warning(message) {
-  Notify.create({type:"warning",message:message,position:"top"});
+  Notify.create({type: "warning", message: message, position: "top"});
 }
 
 /**
@@ -54,7 +54,7 @@ export function warning(message) {
  * @param {string} message 成功消息
  * */
 export function success(message) {
-  Notify.create({type:"positive",message:message,position:"top"});
+  Notify.create({type: "positive", message: message, position: "top"});
 }
 
 /**

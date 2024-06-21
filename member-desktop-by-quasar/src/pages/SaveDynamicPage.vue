@@ -17,12 +17,13 @@ export default {
 
 <html lang="zh-cn">
     <head>
-        <title>new page</title>
+        <title>new page ${this.initNumber}</title>
     </head>
     <body>
-        <h1>NEW PAGE</h1>
+        <h1>NEW PAGE ${this.initNumber}</h1>
     </body>
 </html>`,
+    saving: false,
   }),
   methods: {
     addTab(icon, label, type, content = "") {
@@ -95,6 +96,9 @@ export default {
         this.allTabs.splice(index, 1);
       }
       console.log(index);
+    },
+    async save(){
+
     }
   },
   mounted() {
@@ -180,6 +184,12 @@ export default {
         </div>
       </q-tab-panel>
     </q-tab-panels>
+    <q-btn color="primary" label="保存&发布" :loading="saving">
+      <template v-slot:loading>
+        <q-spinner-hourglass class="on-left"/>
+        保存中...
+      </template>
+    </q-btn>
   </div>
 </template>
 
