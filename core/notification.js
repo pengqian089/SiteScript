@@ -4,7 +4,8 @@
     let connection = new signalR
         .HubConnectionBuilder()
         .withUrl("/notification",
-             {
+            {
+
                 skipNegotiation : true,
                 transport : signalR.HttpTransportType.WebSockets,
             }

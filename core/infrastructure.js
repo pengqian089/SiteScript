@@ -186,87 +186,89 @@ function ajaxFail(xhr, textStatus, errorThrown) {
     }
 }
 
+let videoItems = [];
+
 async function initVideoPlayer() {
     const playerId = "video-player";
     const mPlayerId = "m-video-player";
     const playerElement = document.getElementById(playerId) || document.getElementById(mPlayerId);
+
     if (playerElement !== null) {
-        //player.style.marginBottom = "15px";
-        let response = await fetch(`${dpzOption.webApiBaseAddress}/api/Video`, {
-            method: 'GET',
-            headers: {'Content-Type': 'application/json'},
-            mode: 'cors'
-        });
-        let data = await response.json();
-        let index = Math.floor(Math.random() * data.length);
-
-
-        let danmakuResponse = await fetch(`/history/danmaku/${data[index]["id"]}`);
-        let danmakuItems = await danmakuResponse.json();
-
-        const danmakuOptions = {items: danmakuItems};
-
-        const player = new NPlayer.Player({
-            plugins: [
-                new NPlayerDanmaku(danmakuOptions)
-            ]
-        });
-
-        player.on('DanmakuSend', async (opts) => {
-            await sendDanmaku(opts, data[index]["id"]);
-        });
-
-        const hls = new Hls();
-
-        hls.attachMedia(player.video);
-
-        hls.on(Hls.Events.MEDIA_ATTACHED, function () {
-            hls.loadSource(data[index]["m3u8"])
-        })
-
-        player.mount(playerElement);
+        if (videoItems.length === 0) {
+            let response = await fetch(`${dpzOption.webApiBaseAddress}/api/Video`, {
+                method: 'GET',
+                headers: {'Content-Type': 'application/json'},
+                mode: 'cors'
+            });
+            videoItems = await response.json();
+        }
+        playerElement.style.marginBottom = "1em";
+        playerElement.style.aspectRatio = "16/9";
+        let index = Math.floor(Math.random() * videoItems.length);
+        videoPlayer(playerElement, videoItems[index]["m3u8"], videoItems[index]["id"]);
     }
 
-    const video = document.querySelector("[data-video]");
+    const video = document.querySelector("[data-watch-video]");
     if (video !== null) {
-        const data2 = JSON.parse(video.dataset.video);
-
-        let danmakuResponse2 = await fetch(`/history/danmaku/${data2["id"]}`);
-        let danmakuItems2 = await danmakuResponse2.json();
-
-        const danmakuOptions = {items: danmakuItems2};
-
-        const player2 = new NPlayer.Player({
-            plugins: [
-                new NPlayerDanmaku(danmakuOptions)
-            ]
-        });
-
-        player2.on('DanmakuSend', async (opts) => {
-            await sendDanmaku(opts, data2["id"]);
-        });
-
-        const hls2 = new Hls();
-
-        hls2.attachMedia(player2.video);
-
-        hls2.on(Hls.Events.MEDIA_ATTACHED, function () {
-            hls2.loadSource(data2["url"])
-        });
-
-        player2.mount(video);
+        const data2 = JSON.parse(video.dataset.watchVideo);
+        video.style.marginBottom = "1em";
+        video.style.aspectRatio = "16/9";
+        videoPlayer(video, data2["url"], data2["id"]);
     }
 }
 
-async function sendDanmaku(danmaku, id) {
-    danmaku["id"] = id;
-    await fetch(`/history/danmaku`, {
-        method: 'post',
-        headers: {
-            'Content-Type': 'application/json;charset=utf-8'
+/**
+ * 播放器
+ * @param {Element} element
+ * @param {String} videoSrc
+ * @param {String} videoId
+ * */
+function videoPlayer(element, videoSrc, videoId) {
+    const art = new Artplayer({
+        container: element,
+        url: videoSrc,
+        type: "m3u8",
+        fullscreenWeb: true,
+        fullscreen: true,
+        customType: {
+            m3u8: playM3u8
         },
-        body: JSON.stringify(danmaku)
+        plugins: [
+            artplayerPluginDanmuku({
+                danmuku: async function () {
+                    let danmakuResponse = await fetch(`/history/danmaku/v2/${videoId}`);
+                    return await danmakuResponse.json();
+                }
+            })
+        ],
+        controls: [],
     });
+
+    art.on('artplayerPluginDanmuku:emit', async (danmaku) => {
+        danmaku["id"] = videoId;
+        await fetch(`/send/danmaku/v2`, {
+            method: 'post',
+            headers: {
+                'Content-Type': 'application/json;charset=utf-8'
+            },
+            body: JSON.stringify(danmaku)
+        });
+    });
+
+    function playM3u8(video, url, art) {
+        if (Hls.isSupported()) {
+            if (art.hls) art.hls.destroy();
+            const hls = new Hls();
+            hls.loadSource(url);
+            hls.attachMedia(video);
+            art.hls = hls;
+            art.on('destroy', () => hls.destroy());
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = url;
+        } else {
+            art.notice.show = 'Unsupported playback format: m3u8';
+        }
+    }
 }
 
 
