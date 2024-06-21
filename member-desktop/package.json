@@ -21,7 +21,7 @@
   "devDependencies": {
     "@mdi/font": "^7.3.67",
     "@vitejs/plugin-vue": "^4.3.1",
-    "vite": "^4.4.9",
+    "vite": "^4.5.3",
     "vite-plugin-prismjs": "^0.0.8",
     "vuetify-notifier": "^0.0.10"
   }
