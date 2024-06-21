@@ -68,24 +68,16 @@ layui.config({
             }
         });
 
-    let chatConnection = new signalR
-        .HubConnectionBuilder()
-        .withUrl("/chathub",
-            {
-                skipNegotiation : true,
-                transport : signalR.HttpTransportType.WebSockets,
-            }
-        )
-        .withAutomaticReconnect()
-        .build();
-    try {
-        await chatConnection.start();
-    } catch (e) {
-        console.error(e);
-    }
+    let chatConnection = await getSignalRConnection("/chatHub");
+    let robotConnection = await getSignalRConnection("/robotChat");
 
     chatConnection.on("ReceiveMessage", function (res) {
         res["timestamp"] = res["timestamp"] * 1000;
+        layim.getMessage(res);
+    });
+    robotConnection.on("Answer", function (res) {
+        //res["timestamp"] = res["timestamp"] * 1000;
+        console.log(res);
         layim.getMessage(res);
     });
     chatConnection.on("System", function (res) {
@@ -107,9 +99,9 @@ layui.config({
         // }
         try {
             if (data.to.id === "kefu") {
-                // robotConnection.invoke("SendMessage", data.mine.content).catch(function (err) {
-                //     return console.error(err.toString());
-                // });
+                robotConnection.invoke("SendMessage", data.mine.content).catch(function (err) {
+                    return console.error(err.toString());
+                });
             } else if (data.to.type === "friend") {
                 await chatConnection.invoke("SendMessageToUser", data.to.id, data.mine.content);
             } else if (data.to.type === "group") {
@@ -120,3 +112,22 @@ layui.config({
         }
     });
 });
+
+async function getSignalRConnection(url){
+    let connection = new signalR
+        .HubConnectionBuilder()
+        .withUrl(url,
+            {
+                skipNegotiation : true,
+                transport : signalR.HttpTransportType.WebSockets,
+            }
+        )
+        .withAutomaticReconnect()
+        .build();
+    try {
+        await connection.start();
+    } catch (e) {
+        console.error(e);
+    }
+    return connection;
+}
