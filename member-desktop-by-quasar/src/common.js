@@ -329,3 +329,29 @@ export async function fetchPostAsync({url, formData = null, callback = null}) {
   let response = await fetch(uri, init);
   return await handleResponse(response, callback);
 }
+
+/**
+ * fetch post request
+ * @param {String} url post request url
+ * @param {Object} data request data
+ * @param {function} callback success callback
+ * */
+export async function postAsync({url, data = null, callback = null}) {
+  if (data == null) {
+    data = {};
+  }
+  let uri = `${host}${url}`;
+  let init = {
+    method: "post",
+    body: JSON.stringify(data),
+    headers: {
+      "Content-Type": "application/json"
+    }
+  };
+  let token = getToken();
+  if (!_.isEmpty(token)) {
+    init.headers["Authorization"] = `Bearer ${token}`;
+  }
+  let response = await fetch(uri, init);
+  return await handleResponse(response, callback);
+}

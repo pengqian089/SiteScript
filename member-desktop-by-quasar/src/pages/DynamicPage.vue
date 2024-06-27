@@ -99,7 +99,7 @@ export default {
       });
     },
     publish() {
-      this.router.push({name: 'save-dynamic-page'});
+      this.router.push({name: 'save-dynamic-page', params: {id: ''}});
     },
     async reset() {
       this.name = "";
@@ -135,7 +135,7 @@ export default {
       </template>
       <template v-slot:header="props">
         <q-tr :props="props">
-          <q-th auto-width />
+          <q-th auto-width/>
           <q-th
             v-for="col in props.cols"
             :key="col.name"
@@ -180,7 +180,7 @@ export default {
 </template>
 
 <style scoped>
-pre{
+pre {
   max-height: 500px;
   overflow: auto;
 }

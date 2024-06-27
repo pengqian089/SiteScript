@@ -1,9 +1,10 @@
 <script>
 import _ from "lodash";
 // import * as monaco from 'monaco-editor';
-import {warning} from '../common'
+import {warning, postAsync} from '../common'
 import loader from '@monaco-editor/loader';
 import Enumerable from 'linq';
+import {convertFormData} from "../objectToFormData";
 
 export default {
   data: () => ({
@@ -12,17 +13,6 @@ export default {
     allTabs: [],
     initNumber: 1,
     pageName: null,
-    initHtmlContent:
-      `<!DOCTYPE html>
-
-<html lang="zh-cn">
-    <head>
-        <title>new page ${this.initNumber}</title>
-    </head>
-    <body>
-        <h1>NEW PAGE ${this.initNumber}</h1>
-    </body>
-</html>`,
     saving: false,
   }),
   methods: {
@@ -38,8 +28,24 @@ export default {
       this.initNumber++;
       return tabName;
     },
+    initHtmlContent() {
+      return `<!DOCTYPE html>
+
+<html lang="zh-cn">
+    <head>
+        <title>new page ${this.initNumber}</title>
+    </head>
+    <body>
+        <h1>NEW PAGE ${this.initNumber}</h1>
+    </body>
+</html>`
+    },
     addHtml() {
-      return this.addTab('html', `HTML TAB ${this.initNumber}`, 1, this.initHtmlContent);
+      if (Enumerable.from(this.allTabs).any(x => x.type === 1)) {
+        warning("已有HTML，不能继续添加！");
+        return;
+      }
+      return this.addTab('html', `HTML TAB ${this.initNumber}`, 1, this.initHtmlContent());
     },
     addCss() {
       return this.addTab('css', `CSS TAB ${this.initNumber}`, 2);
@@ -97,7 +103,58 @@ export default {
       }
       console.log(index);
     },
-    async save(){
+    save() {
+      this.saving = true;
+
+      const allTabs = Enumerable.from(this.allTabs);
+      const htmlTab = allTabs.firstOrDefault(x => x.type === 1);
+
+      console.log(allTabs);
+
+      if (htmlTab == null) {
+        this.saving = false;
+        warning("没有HTML");
+        return;
+      }
+      if (_.isEmpty(htmlTab.label)) {
+        this.saving = false;
+        warning("请输入名称");
+        return;
+      }
+      if (_.isEmpty(htmlTab.content)) {
+        this.saving = false;
+        warning("请输入内容");
+        return;
+      }
+
+      let styleContents = {};
+      allTabs.where(x => x.type === 2)
+        .where(x => !_.isEmpty(x.label) && !_.isEmpty(x.content))
+        .forEach((x, y) => {
+          styleContents[y] = {name: x.label, content: x.content}
+        });
+
+      let scriptContents = {};
+      allTabs.where(x => x.type === 3)
+        .where(x => !_.isEmpty(x.label) && !_.isEmpty(x.content))
+        .forEach((x, y) => {
+          scriptContents[y] = {name: x.label, content: x.content}
+        });
+
+      let pageInformation = {
+        htmlContent: {
+          name: htmlTab.label,
+          content: htmlTab.content
+        },
+        styleContents: styleContents,
+        scriptContents: scriptContents
+      };
+      console.log(pageInformation);
+      let that = this;
+      postAsync({url: "/Dynamic/Create", data: pageInformation})
+        .finally(() => {
+          that.saving = false;
+        });
 
     }
   },
@@ -108,7 +165,8 @@ export default {
   },
   updated() {
     let elementEditor = document.getElementById(`${this.tab}_editor`);
-    if (!_.isEmpty(this.tab) && elementEditor !== null) {
+    let loaded = elementEditor?.dataset?.loaded;
+    if (!_.isEmpty(this.tab) && elementEditor !== null && loaded !== "true") {
       let {content, type} = this.getTabData();
       let language = "plaintext";
       switch (type) {
@@ -132,6 +190,7 @@ export default {
           language: language,
           theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? "vs-dark" : "vs",
         });
+        elementEditor.dataset.loaded = "true";
         let that = this;
         editor.getModel().onDidChangeContent((e) => {
           let editorContent = editor.getValue();
@@ -184,7 +243,7 @@ export default {
         </div>
       </q-tab-panel>
     </q-tab-panels>
-    <q-btn color="primary" label="保存&发布" :loading="saving">
+    <q-btn color="primary" label="保存&发布" :loading="saving" @click="save">
       <template v-slot:loading>
         <q-spinner-hourglass class="on-left"/>
         保存中...
@@ -197,10 +256,5 @@ export default {
 .editor {
   width: 100%;
   height: calc(100vh - 191px - 24px);
-}
-
-.tab-item {
-  display: flex;
-  flex-wrap: r;
 }
 </style>
