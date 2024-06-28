@@ -20,7 +20,6 @@ export default {
   async mounted() {
     const {params} = useRoute();
     await this.loadTags();
-    console.log(params);
     let id = params.id;
     if (!_.isEmpty(id)) {
       this.id = id;

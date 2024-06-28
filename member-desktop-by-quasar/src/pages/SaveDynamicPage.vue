@@ -1,10 +1,10 @@
 <script>
 import _ from "lodash";
 // import * as monaco from 'monaco-editor';
-import {warning, postAsync} from '../common'
+import {warning, postAsync, fetchGetAsync} from '../common'
 import loader from '@monaco-editor/loader';
 import Enumerable from 'linq';
-import {convertFormData} from "../objectToFormData";
+import {useRouter, useRoute} from "vue-router";
 
 export default {
   data: () => ({
@@ -14,9 +14,16 @@ export default {
     initNumber: 1,
     pageName: null,
     saving: false,
+    router: useRouter(),
+    loading: false,
+    canAddTab: true
   }),
   methods: {
     addTab(icon, label, type, content = "") {
+      if(!this.canAddTab){
+        warning("不能添加标签");
+        return;
+      }
       let tabName = `tab${this.initNumber}`;
       this.allTabs.push({
         icon: icon,
@@ -40,18 +47,30 @@ export default {
     </body>
 </html>`
     },
-    addHtml() {
+    addHtml(content = null) {
       if (Enumerable.from(this.allTabs).any(x => x.type === 1)) {
         warning("已有HTML，不能继续添加！");
         return;
       }
-      return this.addTab('html', `HTML TAB ${this.initNumber}`, 1, this.initHtmlContent());
+      if (content === null) {
+        return this.addTab('html', `HTML TAB ${this.initNumber}`, 1, this.initHtmlContent());
+      } else {
+        return this.addTab('html', content.label, 1, content.content);
+      }
     },
-    addCss() {
-      return this.addTab('css', `CSS TAB ${this.initNumber}`, 2);
+    addCss(content = null) {
+      if (content === null) {
+        return this.addTab('css', `CSS TAB ${this.initNumber}`, 2);
+      } else {
+        return this.addTab('css', content.label, 2, content.content);
+      }
     },
-    addScript() {
-      return this.addTab('javascript', `SCRIPT TAB ${this.initNumber}`, 3);
+    addScript(content = null) {
+      if (content === null) {
+        return this.addTab('javascript', `SCRIPT TAB ${this.initNumber}`, 3);
+      } else {
+        return this.addTab('javascript', content.label, 3, content.content);
+      }
     },
     changeTab() {
       for (const item of this.allTabs) {
@@ -156,12 +175,43 @@ export default {
           that.saving = false;
         });
 
+    },
+    back() {
+      this.router.push({name: 'dynamic-pages'});
     }
   },
-  mounted() {
-    if (this.allTabs.length === 0) {
-      this.tab = this.addHtml();
+  async mounted() {
+    this.loading = true;
+    const {params} = useRoute();
+    let id = params.id;
+    let pageInformation = null;
+    if (!_.isEmpty(id)) {
+      pageInformation = await fetchGetAsync({url: `/Dynamic/Find/${id}`});
     }
+    if (this.allTabs.length === 0) {
+      if (pageInformation != null) {
+        console.log(pageInformation);
+        let content = {label: pageInformation.id, content: pageInformation.content};
+        this.tab = this.addHtml(content);
+        if (!_.isEmpty(pageInformation.scripts)) {
+          for (const item of pageInformation.scripts) {
+            let scriptContent = {label: item.name, content: item.content};
+            this.addScript(scriptContent);
+          }
+        }
+        if (!_.isEmpty(pageInformation.styles)) {
+          for (const item of pageInformation.styles) {
+            let styleContent = {label: item.name, content: item.content};
+            this.addCss(styleContent);
+          }
+        }
+      } else {
+        this.tab = this.addHtml();
+      }
+    }
+
+    this.canAddTab = pageInformation === null;
+    this.loading = false;
   },
   updated() {
     let elementEditor = document.getElementById(`${this.tab}_editor`);
@@ -204,7 +254,33 @@ export default {
 </script>
 
 <template>
-  <div class="q-pa-md">
+  <div class="q-pa-md" v-if="loading">
+    <q-card>
+      <q-item>
+        <q-item-section avatar>
+          <q-skeleton type="QAvatar"/>
+        </q-item-section>
+
+        <q-item-section>
+          <q-item-label>
+            <q-skeleton type="text"/>
+          </q-item-label>
+          <q-item-label caption>
+            <q-skeleton type="text"/>
+          </q-item-label>
+        </q-item-section>
+      </q-item>
+
+      <q-skeleton height="200px" square/>
+
+      <q-card-actions align="right" class="q-gutter-md">
+        <q-skeleton type="QBtn"/>
+        <q-skeleton type="QBtn"/>
+      </q-card-actions>
+    </q-card>
+
+  </div>
+  <div class="q-pa-md" v-else>
     <q-toolbar class="bg-purple text-white shadow-2 rounded-borders">
       <q-btn color="primary" icon="menu" label="新建TAB">
         <q-menu>
@@ -249,12 +325,14 @@ export default {
         保存中...
       </template>
     </q-btn>
+    <q-btn color="secondary" label="返回列表" @click="back">
+    </q-btn>
   </div>
 </template>
 
 <style scoped>
 .editor {
   width: 100%;
-  height: calc(100vh - 191px - 24px);
+  height: calc(100vh - 191px - 40px);
 }
 </style>
