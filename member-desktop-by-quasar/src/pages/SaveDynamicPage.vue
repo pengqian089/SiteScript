@@ -1,7 +1,7 @@
 <script>
 import _ from "lodash";
 // import * as monaco from 'monaco-editor';
-import {warning, postAsync, fetchGetAsync} from '../common'
+import {warning, postAsync, fetchGetAsync, success} from '../common'
 import loader from '@monaco-editor/loader';
 import Enumerable from 'linq';
 import {useRouter, useRoute} from "vue-router";
@@ -16,11 +16,11 @@ export default {
     saving: false,
     router: useRouter(),
     loading: false,
-    canAddTab: true
+    canUseTab: true
   }),
   methods: {
     addTab(icon, label, type, content = "") {
-      if(!this.canAddTab){
+      if (!this.canUseTab) {
         warning("不能添加标签");
         return;
       }
@@ -107,7 +107,10 @@ export default {
       }
     },
     closeTab(tabName) {
-      console.log(tabName);
+      if (!this.canUseTab) {
+        warning("不能移除标签");
+        return;
+      }
       if (this.allTabs.length === 1) {
         warning("至少要保留一个标签");
         return;
@@ -170,7 +173,12 @@ export default {
       };
       console.log(pageInformation);
       let that = this;
-      postAsync({url: "/Dynamic/Create", data: pageInformation})
+      let url = this.canUseTab ? "/Dynamic/Create" : "/Dynamic/Save";
+      postAsync({url: url, data: pageInformation})
+        .then(() => {
+          success("保存成功");
+          this.router.push({name: 'dynamic-pages'});
+        })
         .finally(() => {
           that.saving = false;
         });
@@ -210,7 +218,7 @@ export default {
       }
     }
 
-    this.canAddTab = pageInformation === null;
+    this.canUseTab = pageInformation === null;
     this.loading = false;
   },
   updated() {
