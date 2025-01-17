@@ -1,15 +1,11 @@
 <component name="libraryTable">
-  <library name="layUI" type="javaScript">
+  <library name="layui" type="javaScript">
     <properties>
       <sourceFilesUrls>
-        <item url="file://$PROJECT_DIR$/../SiteSource/core/lib/layer" />
-        <item url="file://$PROJECT_DIR$/../SiteSource/core/lib/layim" />
         <item url="file://$PROJECT_DIR$/../SiteSource/core/lib/layui" />
       </sourceFilesUrls>
     </properties>
     <CLASSES>
-      <root url="file://$PROJECT_DIR$/../SiteSource/core/lib/layer" />
-      <root url="file://$PROJECT_DIR$/../SiteSource/core/lib/layim" />
       <root url="file://$PROJECT_DIR$/../SiteSource/core/lib/layui" />
     </CLASSES>
     <JAVADOC />

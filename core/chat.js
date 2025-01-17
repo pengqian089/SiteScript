@@ -1,42 +1,57 @@
+// noinspection t
+
+
+let layImConfig = {
+    contactsPanel: {
+        showFriend: true,
+        showGroup: true,
+        minStatus: true,
+    },
+    pageurl: {
+        // 查看更多聊天记录
+        chatlog: "/chat/record"
+    },
+
+    title: "聊天室",
+    copyright: true,
+    isAudio: true,
+    // 初始化接口
+    init: {
+        url: "/chat/init"
+    },
+    min: true,
+    theme: 'dark',
+    // 群成员接口
+    members: {
+        url: "/chat/groupMembers",
+        type: "get",
+        data: {}
+    },
+
+    tool: [
+        {
+            alias: "code",
+            title: "代码",
+            icon: "&#xe64e;"
+        }
+    ]
+};
+
+
 layui.config({
     layimPath: `${dpzOption.CDNBaseAddress}/lib/layim/`,
-    layimAssetsPath: `${dpzOption.CDNBaseAddress}/lib/layim/layim-assets/`,
+    layimAssetsPath: `${dpzOption.CDNBaseAddress}/lib/layim/res/`,
 }).extend({
-    layim: layui.cache.layimPath + 'layim'
+    layim: `${dpzOption.CDNBaseAddress}/lib/layim/layim`
 }).use(["layim", "layer"], async function () {
+    console.log(layui.cache.layimPath);
     if (layui.device().mobile === true) {
         return;
     }
     let layim = layui.layim,
         layer = layui.layer;
 
-    layim.config({
-        title: "聊天室",
-        copyright: true,
-        isAudio: true,
-        // 查看更多聊天记录
-        chatLog: "/chat/record",
-        // 初始化接口
-        init: {
-            url: "/chat/init",
-            data: {}
-        },
-        min: true,
-        // 群成员接口
-        members: {
-            url: "/chat/groupMembers",
-            type: "get",
-            data: {}
-        },
-
-        tool: [
-            {
-                alias: "code",
-                title: "代码",
-                icon: "&#xe64e;"
-            }
-        ]
-    });
+    layim.config(layImConfig);
     layim.on("tool(code)",
         function (insert) {
             layer.prompt({
@@ -113,13 +128,13 @@ layui.config({
     });
 });
 
-async function getSignalRConnection(url){
+async function getSignalRConnection(url) {
     let connection = new signalR
         .HubConnectionBuilder()
         .withUrl(url,
             {
-                skipNegotiation : true,
-                transport : signalR.HttpTransportType.WebSockets,
+                skipNegotiation: true,
+                transport: signalR.HttpTransportType.WebSockets,
             }
         )
         .withAutomaticReconnect()
