@@ -29,5 +29,6 @@
     <orderEntry type="library" name="amplitudejs" level="project" />
     <orderEntry type="library" name="music-player" level="project" />
     <orderEntry type="library" name="art-player" level="project" />
+    <orderEntry type="library" name="showdown" level="project" />
   </component>
 </module>

@@ -35,6 +35,7 @@ let layImConfig = {
     ]
 };
 
+const converter = new showdown.Converter();
 
 layui.config({
     layimPath: `${dpzOption.CDNBaseAddress}/lib/layim/`,
@@ -47,6 +48,10 @@ layui.config({
     }
     let layim = layui.layim,
         layer = layui.layer;
+
+    layim.callback('contentParser', content => {
+        return converter.makeHtml(content);
+    });
 
     layim.config(layImConfig);
     layim.on("tool(code)",
