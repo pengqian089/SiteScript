@@ -11,8 +11,6 @@ let layImConfig = {
         // 查看更多聊天记录
         chatlog: "/chat/record"
     },
-
-    title: "聊天室",
     copyright: true,
     isAudio: true,
     // 初始化接口
@@ -40,11 +38,10 @@ let layImConfig = {
 
 layui.config({
     layimPath: `${dpzOption.CDNBaseAddress}/lib/layim/`,
-    layimAssetsPath: `${dpzOption.CDNBaseAddress}/lib/layim/res/`,
+    layimResPath: `${dpzOption.CDNBaseAddress}/lib/layim/res/`,
 }).extend({
     layim: `${dpzOption.CDNBaseAddress}/lib/layim/layim`
 }).use(["layim", "layer"], async function () {
-    console.log(layui.cache.layimPath);
     if (layui.device().mobile === true) {
         return;
     }
@@ -90,14 +87,21 @@ layui.config({
         res["timestamp"] = res["timestamp"] * 1000;
         layim.getMessage(res);
     });
+
+
+
     robotConnection.on("Answer", function (res) {
         //res["timestamp"] = res["timestamp"] * 1000;
         console.log(res);
         layim.getMessage(res);
     });
+
+    robotConnection.on("SystemError",function (res){
+        console.error(res);
+        layim.getMessage(res);
+    });
     chatConnection.on("System", function (res) {
         if (res.code < 0) {
-            //console.log("%cchatHub:" + res.content, "color:#ff00ff");
             outPutError(res.content);
             chatConnection.stop();
         } else if (res.code === 0 && !res.isGuest) {
@@ -108,25 +112,43 @@ layui.config({
             layim.setFriendStatus(res.user.id, "online");
         }
     });
-    layim.on("sendMessage", async function (data) {
-        // if (data.to.type === "friend") {
-        //     layim.setChatStatus('<span style="color:#FF5722;">对方正在输入。。。</span>');
-        // }
+
+    layim.on("sendMessage", sendMessage);
+    layim.on('viewMmembers', loadMembers);
+
+    async function sendMessage(data){
+        const receiverId = data.receiver.id;
+        const type = data.receiver.type;
+        const content = data.user.content;
+
         try {
-            if (data.to.id === "kefu") {
-                robotConnection.invoke("SendMessage", data.mine.content).catch(function (err) {
-                    return console.error(err.toString());
-                });
-            } else if (data.to.type === "friend") {
-                await chatConnection.invoke("SendMessageToUser", data.to.id, data.mine.content);
-            } else if (data.to.type === "group") {
-                await chatConnection.invoke("SendMessageToGroup", data.to.id, data.mine.content);
+            if(receiverId === "kefu"){
+                await robotConnection.invoke("SendMessage", content);
             }
-        } catch (invokeError) {
+            if(receiverId === "e0a82f97-d01d-43c0-a257-97998003e8b9"){
+                await robotConnection.invoke("SendMessageToChatGpt", content);
+            }
+            else if (type === "friend") {
+                await chatConnection.invoke("SendMessageToUser", receiverId, content);
+            }
+            else if (type === "group") {
+                await chatConnection.invoke("SendMessageToGroup", receiverId, content);
+            }
+
+        }
+        catch (invokeError) {
             console.error(invokeError);
         }
-    });
+    }
 });
+
+
+async function loadMembers(data){
+    let request = await fetch(`/chat/groupMembers/${data.receiver.id}`,{method:"GET"});
+    let result = await request.json();
+    data.render(result.data);
+}
+
 
 async function getSignalRConnection(url) {
     let connection = new signalR
