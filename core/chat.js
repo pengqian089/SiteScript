@@ -1,7 +1,7 @@
 // noinspection t
 
 
-let layImConfig = {
+const layImConfig = {
     contactsPanel: {
         showFriend: true,
         showGroup: true,
@@ -11,29 +11,30 @@ let layImConfig = {
         // 查看更多聊天记录
         chatlog: "/chat/record"
     },
-    copyright: true,
-    isAudio: true,
     // 初始化接口
     init: {
         url: "/chat/init"
     },
-    min: true,
-    theme: 'dark',
-    // 群成员接口
-    members: {
-        url: "/chat/groupMembers",
-        type: "get",
-        data: {}
-    },
-
-    tool: [
-        {
-            alias: "code",
-            title: "代码",
-            icon: "&#xe64e;"
-        }
-    ]
+    theme: dpzOption.isDark ? 'dark' : 'light',
 };
+
+const chatTools = [
+    {
+        name: 'code',
+        title: '插入代码',
+        icon: 'layui-icon-fonts-code',
+        onClick: function (obj) {
+            layer.prompt({
+                title: '插入代码',
+                formType: 2
+            }, function (text, index) {
+                layer.close(index);
+                text = ['```', text, '```'].join('\n');
+                obj.insert(text);
+            });
+        }
+    },
+];
 
 const converter = new showdown.Converter();
 
@@ -50,22 +51,21 @@ layui.config({
         layer = layui.layer;
 
     layim.callback('contentParser', content => {
-        return converter.makeHtml(content);
+        const html = converter.makeHtml(content);
+        let $html = $(`<div><div class="markdown-body">${html}</div></div>`);
+        $html.find("pre code").each(function (index, element) {
+            console.log(element);
+            $(element).parents("pre").attr("style","padding:1em !important;")
+            Prism.highlightElement(element);
+            const $code = $(element);
+            $code.replaceWith("<div>" + $code.html() + "</div>");
+        });
+        return $html.html();
     });
 
     layim.config(layImConfig);
-    layim.on("tool(code)",
-        function (insert) {
-            layer.prompt({
-                    title: "插入代码",
-                    formType: 2,
-                    shade: 0
-                },
-                function (text, index) {
-                    layer.close(index);
-                    insert("[pre class=layui-code]" + text + "[/pre]");
-                });
-        });
+
+    layim.extendChatTools(chatTools);
 
     layim.on("sign",
         async function (value) {
@@ -120,6 +120,7 @@ layui.config({
 
     layim.on("sendMessage", sendMessage);
     layim.on('viewMmembers', loadMembers);
+    layim.callback('chatlog', loadChatRecord)
 
     async function sendMessage(data){
         const receiverId = data.receiver.id;
@@ -145,7 +146,14 @@ layui.config({
             console.error(invokeError);
         }
     }
+
+    async function loadChatRecord(obj){
+        console.log(obj);
+        const response = await fetch(`/Chat/ChatRecord/${obj.receiver.id}?type=${obj.receiver.type}`);
+        return await response.json();
+    }
 });
+
 
 
 async function loadMembers(data){

@@ -15,6 +15,14 @@ const dpzOption = {
     isDark: window.matchMedia('(prefers-color-scheme: dark)').matches
 };
 
+if (dpzOption.isDark) {
+    document
+        .querySelector('#layui_theme_css')
+        .setAttribute(
+            'href',
+            `${dpzOption.CDNBaseAddress}/lib/layui/css/layui-theme-dark.css`
+        );
+}
 
 (async function () {
     let userResponse = await fetch("/account/GetUserInfo");
@@ -121,7 +129,7 @@ const dpzOption = {
     ReactJkMusicPlayer.defaultProps.showDestroy = false;
     ReactJkMusicPlayer.defaultProps.showReload = false;
     ReactJkMusicPlayer.defaultProps.volumeFade = {fadeIn: 300, fadeOut: 300};
-    ReactJkMusicPlayer.defaultProps.sortableOptions =  { disabled: true, forceFallback: true };
+    ReactJkMusicPlayer.defaultProps.sortableOptions = {disabled: true, forceFallback: true};
     ReactJkMusicPlayer.defaultProps.audioLists = musics;
     ReactDOM.render(
         React.createElement(ReactJkMusicPlayer),
