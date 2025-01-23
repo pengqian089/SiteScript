@@ -1,5 +1,6 @@
 // noinspection t
 
+"use strict";
 
 const layImConfig = {
     contactsPanel: {
@@ -36,7 +37,14 @@ const chatTools = [
     },
 ];
 
-const converter = new showdown.Converter();
+const converter = new showdown.Converter({
+    openLinksInNewWindow: true,
+    simplifiedAutoLink: true,
+    splitAdjacentBlockquotes: true,
+    strikethrough: true,
+    tables: true,
+    tasklists: true,
+});
 
 layui.config({
     layimPath: `${dpzOption.CDNBaseAddress}/lib/layim/`,
@@ -51,15 +59,23 @@ layui.config({
         layer = layui.layer;
 
     layim.callback('contentParser', content => {
-        const html = converter.makeHtml(content);
+        // debugger
+        const $content = $("<div>").html(content);
+        const escapedContent = $("<div>").text($content.html()).html();
+        const html = converter.makeHtml(escapedContent);
+
+        //debugger
         let $html = $(`<div><div class="markdown-body">${html}</div></div>`);
         $html.find("pre code").each(function (index, element) {
             console.log(element);
-            $(element).parents("pre").attr("style","padding:1em !important;")
+            $(element).parents("pre").attr("style", "padding:1em !important;")
             Prism.highlightElement(element);
             const $code = $(element);
             $code.replaceWith("<div>" + $code.html() + "</div>");
         });
+
+        console.log($html.html(), new Date());
+
         return $html.html();
     });
 
@@ -94,14 +110,13 @@ layui.config({
     });
 
 
-
     robotConnection.on("Answer", function (res) {
         //res["timestamp"] = res["timestamp"] * 1000;
         console.log(res);
         layim.getMessage(res);
     });
 
-    robotConnection.on("SystemError",function (res){
+    robotConnection.on("SystemError", function (res) {
         console.error(res);
         layim.getMessage(res);
     });
@@ -122,32 +137,29 @@ layui.config({
     layim.on('viewMmembers', loadMembers);
     layim.callback('chatlog', loadChatRecord)
 
-    async function sendMessage(data){
+    async function sendMessage(data) {
         const receiverId = data.receiver.id;
         const type = data.receiver.type;
         const content = data.user.content;
 
         try {
-            if(receiverId === "kefu"){
+            if (receiverId === "kefu") {
                 await robotConnection.invoke("SendMessage", content);
             }
-            if(receiverId === "e0a82f97-d01d-43c0-a257-97998003e8b9"){
+            if (receiverId === "e0a82f97-d01d-43c0-a257-97998003e8b9") {
                 await robotConnection.invoke("SendMessageToChatGpt", content);
-            }
-            else if (type === "friend") {
+            } else if (type === "friend") {
                 await chatConnection.invoke("SendMessageToUser", receiverId, content);
-            }
-            else if (type === "group") {
+            } else if (type === "group") {
                 await chatConnection.invoke("SendMessageToGroup", receiverId, content);
             }
 
-        }
-        catch (invokeError) {
+        } catch (invokeError) {
             console.error(invokeError);
         }
     }
 
-    async function loadChatRecord(obj){
+    async function loadChatRecord(obj) {
         console.log(obj);
         const response = await fetch(`/Chat/ChatRecord/${obj.receiver.id}?type=${obj.receiver.type}`);
         return await response.json();
@@ -155,9 +167,8 @@ layui.config({
 });
 
 
-
-async function loadMembers(data){
-    let request = await fetch(`/chat/groupMembers/${data.receiver.id}`,{method:"GET"});
+async function loadMembers(data) {
+    let request = await fetch(`/chat/groupMembers/${data.receiver.id}`, {method: "GET"});
     let result = await request.json();
     data.render(result.data);
 }
