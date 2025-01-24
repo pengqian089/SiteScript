@@ -74,8 +74,6 @@ layui.config({
             $code.replaceWith("<div>" + $code.html() + "</div>");
         });
 
-        console.log($html.html(), new Date());
-
         return $html.html();
     });
 
