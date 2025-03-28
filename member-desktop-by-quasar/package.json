@@ -20,7 +20,7 @@
     "lodash": "^4.17.21",
     "md-editor-v3": "^4.13.5",
     "monaco-editor": "^0.48.0",
-    "prismjs": "^1.29.0",
+    "prismjs": "^1.30.0",
     "quasar": "^2.8.0",
     "vite-plugin-prismjs": "^0.0.11",
     "vue": "^3.4.18",
