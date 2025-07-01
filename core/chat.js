@@ -10,7 +10,10 @@ const layImConfig = {
     },
     pageurl: {
         // 查看更多聊天记录
-        chatlog: "/chat/record"
+        chatlog: function(data) {
+            const receiver = data.receiver;
+            return `/chat/record/${receiver.id}?type=${receiver.type}`;
+        }
     },
     // 初始化接口
     init: {
@@ -33,6 +36,14 @@ const chatTools = [
                 text = ['```', text, '```'].join('\n');
                 obj.insert(text);
             });
+        }
+    },
+    {
+        name: 'clear',
+        title: '清除聊天记录',
+        icon: 'layui-icon-clear',
+        onClick: function (obj) {
+           console.log(obj);
         }
     },
 ];

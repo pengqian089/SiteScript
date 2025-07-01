@@ -207,15 +207,22 @@ async function initVideoPlayer() {
 
     if (playerElement !== null) {
         if (videoItems.length === 0) {
-            let response = await fetch(`${dpzOption.webApiBaseAddress}/api/Video`, {
-                method: 'GET',
-                headers: {'Content-Type': 'application/json'},
-                mode: 'cors'
-            });
-            videoItems = await response.json();
+            try {
+                let response = await fetch(`${dpzOption.webApiBaseAddress}/api/Video`, {
+                    method: 'GET',
+                    headers: {'Content-Type': 'application/json'},
+                    mode: 'cors'
+                });
+                videoItems = await response.json();
+            } catch (e) {
+                console.log(e);
+            }
+        }
+        if (videoItems.length === 0) {
+            return;
         }
         playerElement.style.marginBottom = "1em";
-        if (window.innerWidth <= 550){
+        if (window.innerWidth <= 550) {
             playerElement.style.marginBottom = "4em";
         }
         playerElement.style.aspectRatio = "16/9";
@@ -291,7 +298,7 @@ async function initFetchContent() {
     let fetchContents = document.querySelectorAll("[data-request]");
     for (let item of fetchContents) {
         let loaded = item.dataset["status"];
-        if(loaded === "loaded"){
+        if (loaded === "loaded") {
             continue;
         }
         let response = await fetch(item.dataset.request, {
