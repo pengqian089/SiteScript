@@ -1,6 +1,6 @@
 "use strict";
 
-layui.use(["element"],function(){
+layui.use(["element"], function () {
     let element = layui.element,
         form = layui.form;
 
@@ -62,4 +62,7 @@ function pjaxCompleteInit() {
     $("time.timeago").relativeTime();
     initVideoPlayer().catch(x => console.log(x));
     initFetchContent().catch(x => console.log(x));
+    if (window.innerWidth <= 768) {
+        initMobileSearch();
+    }
 }
