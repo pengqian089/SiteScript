@@ -12,7 +12,9 @@ Write-Host $path
 "./core/bookmark.js",
 "./core/comment.js",
 "./core/mumble.js",
-"./core/chat.js"
+"./core/chat.js",
+"./core/mobile-search.js",
+"./core/steam.js"
 
 
 foreach ($item in $jsPaths)
