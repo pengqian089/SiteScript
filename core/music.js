@@ -232,5 +232,4 @@ function musicInit() {
             }
         ]
     });
-    document.getElementById('large-visualization').style.height = document.getElementById('album-art').offsetWidth + 'px';
 }
