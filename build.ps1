@@ -14,7 +14,8 @@ Write-Host $path
 "./core/mumble.js",
 "./core/chat.js",
 "./core/mobile-search.js",
-"./core/steam.js"
+"./core/steam.js",
+"./core/albums.js"
 
 
 foreach ($item in $jsPaths)
