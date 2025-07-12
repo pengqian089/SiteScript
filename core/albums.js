@@ -135,7 +135,8 @@
     function initializeData() {
         // 从DOM元素读取初始化数据
         const containerElement = document.querySelector('.albums-container-v2');
-        if (!containerElement) {
+        const albumsPicturesElement = document.querySelector('#albums-pictures-data');
+        if (!containerElement || !albumsPicturesElement) {
             console.error('Albums container not found');
             return;
         }
@@ -149,7 +150,8 @@
         
         // 解析图片数据
         try {
-            albumsData.pictures = JSON.parse(containerElement.dataset.pictures || '[]');
+            console.log(albumsPicturesElement.value);
+            albumsData.pictures = JSON.parse(albumsPicturesElement.value || '[]');
         } catch (error) {
             console.error('Failed to parse pictures data:', error);
             albumsData.pictures = [];
@@ -1422,8 +1424,10 @@
 
     // 清理函数
     function cleanup() {
+        // 清理 Intersection Observer
         if (observerInstance) {
             observerInstance.disconnect();
+            observerInstance = null;
         }
         
         // 清理 sentinel 元素
@@ -1435,21 +1439,78 @@
         // 清理模态框事件监听器
         unbindModalEvents();
         
+        // 关闭模态框（如果打开）
+        if (modal && modal.style.display !== 'none') {
+            closeModal();
+        }
+        
+        // 重置全局变量
+        isLoading = false;
+        hasMorePages = true;
+        currentImageIndex = 0;
+        allImages = [];
+        currentScale = 1;
+        currentTranslateX = 0;
+        currentTranslateY = 0;
+        isDragging = false;
+        
+        // 重置 DOM 元素引用
+        loadingElement = null;
+        noMoreElement = null;
+        masonryContainer = null;
+        modal = null;
+        modalImage = null;
+        modalPrevBtn = null;
+        modalNextBtn = null;
+        imageContainer = null;
+        
         // 移除事件监听器
         window.removeEventListener('resize', adjustMasonryLayout);
         window.removeEventListener('scroll', checkLoadMore);
+        
+        // 恢复页面滚动
+        document.body.style.overflow = '';
     }
 
     // 页面卸载时清理
-    window.addEventListener('beforeunload', cleanup);
+    window.addEventListener('beforeunload', window.cleanupAlbums);
 
 
+
+    // 公开初始化函数以支持 pjax
+    window.initAlbums = function() {
+        // 检查是否是相册页面
+        if (!document.querySelector('.albums-container-v2')) {
+            return false;
+        }
+        
+        // 如果已经初始化过，先清理
+        if (observerInstance || modal) {
+            cleanup();
+        }
+        
+        try {
+            init();
+            return true;
+        } catch (error) {
+            console.error('Failed to initialize albums:', error);
+            return false;
+        }
+    };
+
+    // 公开清理函数以支持 pjax
+    window.cleanupAlbums = function() {
+        // 只有当相册已初始化时才进行清理
+        if (observerInstance || modal || masonryContainer) {
+            cleanup();
+        }
+    };
 
     // 页面加载完成后初始化
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', window.initAlbums);
     } else {
-        init();
+        window.initAlbums();
     }
 
 })();
