@@ -20,6 +20,16 @@
     let modalPrevBtn = null;
     let modalNextBtn = null;
     
+    // 相册数据
+    let albumsData = {
+        currentPage: 1,
+        pageSize: 20,
+        totalPages: 1,
+        totalCount: 0,
+        hasNextPage: false,
+        pictures: []
+    };
+    
     // 图片缩放和拖拽相关变量
     let currentScale = 1;
     let currentTranslateX = 0;
@@ -62,8 +72,8 @@
             }
 
             // 检查必要的数据
-            if (!window.albumsData) {
-                console.error('Albums data not found');
+            if (!albumsData || !albumsData.pictures) {
+                console.error('Albums data not properly initialized');
                 return;
             }
 
@@ -106,16 +116,6 @@
         modalNextBtn = document.getElementById('albumsModalNext');
         imageContainer = document.querySelector('.albums-modal-image-container-v2');
         
-        // 收集所有图片信息，并统一数据结构
-        allImages = (window.albumsData.pictures || []).map(picture => ({
-            id: picture.id,
-            url: picture.url,
-            description: picture.description,
-            width: picture.width,
-            height: picture.height
-        }));
-        hasMorePages = window.albumsData.hasNextPage;
-        
         // 验证必要元素
         if (!masonryContainer) {
             throw new Error('Masonry container not found');
@@ -126,6 +126,44 @@
         if (!imageContainer) {
             throw new Error('Image container not found');
         }
+        
+        // 初始化数据
+        initializeData();
+    }
+
+    // 初始化数据
+    function initializeData() {
+        // 从DOM元素读取初始化数据
+        const containerElement = document.querySelector('.albums-container-v2');
+        if (!containerElement) {
+            console.error('Albums container not found');
+            return;
+        }
+        
+        // 读取数据属性
+        albumsData.currentPage = parseInt(containerElement.dataset.currentPage) || 1;
+        albumsData.pageSize = parseInt(containerElement.dataset.pageSize) || 20;
+        albumsData.totalPages = parseInt(containerElement.dataset.totalPages) || 1;
+        albumsData.totalCount = parseInt(containerElement.dataset.totalCount) || 0;
+        albumsData.hasNextPage = containerElement.dataset.hasNextPage === 'true';
+        
+        // 解析图片数据
+        try {
+            albumsData.pictures = JSON.parse(containerElement.dataset.pictures || '[]');
+        } catch (error) {
+            console.error('Failed to parse pictures data:', error);
+            albumsData.pictures = [];
+        }
+        
+        // 收集所有图片信息，并统一数据结构
+        allImages = (albumsData.pictures || []).map(picture => ({
+            id: picture.id,
+            url: picture.url,
+            description: picture.description,
+            width: picture.width,
+            height: picture.height
+                }));
+        hasMorePages = albumsData.hasNextPage;
     }
 
     // 初始化原生JavaScript事件
@@ -302,8 +340,8 @@
         showLoadingIndicator();
         
         try {
-            const nextPage = window.albumsData.currentPage + 1;
-            const response = await fetch(`/pages/albums?pageIndex=${nextPage}&pageSize=${window.albumsData.pageSize}`);
+            const nextPage = albumsData.currentPage + 1;
+            const response = await fetch(`/pages/albums?pageIndex=${nextPage}&pageSize=${albumsData.pageSize}`);
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -312,8 +350,8 @@
             const data = await response.json();
             
                          // 更新页面数据
-             window.albumsData.currentPage = data.currentPageIndex;
-             window.albumsData.hasNextPage = data.totalPageCount > data.currentPageIndex;
+             albumsData.currentPage = data.currentPageIndex;
+             albumsData.hasNextPage = data.totalPageCount > data.currentPageIndex;
              hasMorePages = data.totalPageCount > data.currentPageIndex;
             
             // 更新统计信息
@@ -1371,7 +1409,10 @@
                 return date.toLocaleDateString('zh-CN', {
                     year: 'numeric',
                     month: 'short',
-                    day: 'numeric'
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
                 });
             }
         } catch (error) {
