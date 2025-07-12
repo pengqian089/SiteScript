@@ -204,13 +204,27 @@
     function initializeScrollListener() {
         // 使用 Intersection Observer 监听加载更多
         if ('IntersectionObserver' in window) {
+            // 创建 sentinel 元素并放在瀑布流容器的末尾
             const sentinel = document.createElement('div');
+            sentinel.id = 'albums-sentinel';
             sentinel.style.height = '1px';
-            sentinel.style.position = 'absolute';
-            sentinel.style.bottom = `${config.loadThreshold}px`;
-            sentinel.style.left = '0';
             sentinel.style.width = '100%';
-            document.body.appendChild(sentinel);
+            sentinel.style.position = 'relative';
+            sentinel.style.clear = 'both';
+            sentinel.style.backgroundColor = 'transparent';
+            
+            // 将 sentinel 放在加载指示器之前
+            const loadingElement = document.getElementById('albumsLoading');
+            if (loadingElement && loadingElement.parentNode) {
+                loadingElement.parentNode.insertBefore(sentinel, loadingElement);
+            } else {
+                const container = document.querySelector('.albums-container-v2');
+                if (container) {
+                    container.appendChild(sentinel);
+                } else {
+                    document.body.appendChild(sentinel);
+                }
+            }
             
             observerInstance = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
@@ -220,8 +234,8 @@
                 });
             }, {
                 root: null,
-                rootMargin: '0px',
-                threshold: 0.1
+                rootMargin: `${config.loadThreshold}px`,
+                threshold: 0.01
             });
             
             observerInstance.observe(sentinel);
@@ -245,8 +259,38 @@
         const windowHeight = window.innerHeight;
         const documentHeight = document.documentElement.scrollHeight;
         
-        if (scrollTop + windowHeight >= documentHeight - config.loadThreshold && hasMorePages && !isLoading) {
+        // 计算到底部的距离
+        const distanceToBottom = documentHeight - (scrollTop + windowHeight);
+        
+        if (distanceToBottom <= config.loadThreshold && hasMorePages && !isLoading) {
             loadMoreImages();
+        }
+    }
+
+    // 更新 sentinel 元素位置
+    function updateSentinelPosition() {
+        const sentinel = document.getElementById('albums-sentinel');
+        if (!sentinel) return;
+        
+        const loadingElement = document.getElementById('albumsLoading');
+        if (loadingElement && loadingElement.parentNode && sentinel.parentNode) {
+            // 确保 sentinel 在 loading 元素之前
+            if (sentinel.nextSibling !== loadingElement) {
+                loadingElement.parentNode.insertBefore(sentinel, loadingElement);
+            }
+        }
+    }
+
+    // 停止观察 sentinel 元素
+    function stopObservingSentinel() {
+        if (observerInstance) {
+            observerInstance.disconnect();
+            observerInstance = null;
+        }
+        
+        const sentinel = document.getElementById('albums-sentinel');
+        if (sentinel && sentinel.parentNode) {
+            sentinel.parentNode.removeChild(sentinel);
         }
     }
 
@@ -295,6 +339,11 @@
                 hideLoadingIndicator();
                 if (!hasMorePages) {
                     showNoMoreIndicator();
+                    // 停止观察 sentinel 元素
+                    stopObservingSentinel();
+                } else {
+                    // 确保 sentinel 元素仍然在正确的位置
+                    updateSentinelPosition();
                 }
             }, config.loadDelay);
             
@@ -1334,6 +1383,12 @@
     function cleanup() {
         if (observerInstance) {
             observerInstance.disconnect();
+        }
+        
+        // 清理 sentinel 元素
+        const sentinel = document.getElementById('albums-sentinel');
+        if (sentinel && sentinel.parentNode) {
+            sentinel.parentNode.removeChild(sentinel);
         }
         
         // 清理模态框事件监听器
