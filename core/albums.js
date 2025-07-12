@@ -19,7 +19,16 @@
     let modalImage = null;
     let modalPrevBtn = null;
     let modalNextBtn = null;
-    
+
+    // 事件监听器引用
+    let eventListeners = {
+        click: null,
+        load: null,
+        error: null,
+        resize: null,
+        scroll: null
+    };
+
     // 相册数据
     let albumsData = {
         currentPage: 1,
@@ -29,7 +38,7 @@
         hasNextPage: false,
         pictures: []
     };
-    
+
     // 图片缩放和拖拽相关变量
     let currentScale = 1;
     let currentTranslateX = 0;
@@ -41,7 +50,7 @@
     let dragStartTranslateY = 0;
     let lastTouchDistance = 0;
     let imageContainer = null;
-    
+
     // 缩放配置
     const zoomConfig = {
         minScale: 0.5,
@@ -79,25 +88,25 @@
 
             // 初始化DOM元素
             initializeElements();
-            
+
             // 初始化事件绑定
             initializeEventDelegation();
-            
+
             // 初始化瀑布流
             initializeMasonry();
-            
+
             // 初始化滚动监听
             initializeScrollListener();
-            
+
             // 初始化模态框
             initializeModal();
-            
+
             // 初始化图片懒加载
             initializeLazyLoading();
-            
+
             // 初始化图片预加载
             initializeImagePreloading();
-            
+
             // 设置初始状态
             updateLoadingState();
         } catch (error) {
@@ -115,7 +124,7 @@
         modalPrevBtn = document.getElementById('albumsModalPrev');
         modalNextBtn = document.getElementById('albumsModalNext');
         imageContainer = document.querySelector('.albums-modal-image-container-v2');
-        
+
         // 验证必要元素
         if (!masonryContainer) {
             throw new Error('Masonry container not found');
@@ -126,7 +135,7 @@
         if (!imageContainer) {
             throw new Error('Image container not found');
         }
-        
+
         // 初始化数据
         initializeData();
     }
@@ -140,23 +149,22 @@
             console.error('Albums container not found');
             return;
         }
-        
+
         // 读取数据属性
         albumsData.currentPage = parseInt(containerElement.dataset.currentPage) || 1;
         albumsData.pageSize = parseInt(containerElement.dataset.pageSize) || 20;
         albumsData.totalPages = parseInt(containerElement.dataset.totalPages) || 1;
         albumsData.totalCount = parseInt(containerElement.dataset.totalCount) || 0;
         albumsData.hasNextPage = containerElement.dataset.hasNextPage === 'true';
-        
+
         // 解析图片数据
         try {
-            console.log(albumsPicturesElement.value);
             albumsData.pictures = JSON.parse(albumsPicturesElement.value || '[]');
         } catch (error) {
             console.error('Failed to parse pictures data:', error);
             albumsData.pictures = [];
         }
-        
+
         // 收集所有图片信息，并统一数据结构
         allImages = (albumsData.pictures || []).map(picture => ({
             id: picture.id,
@@ -164,14 +172,17 @@
             description: picture.description,
             width: picture.width,
             height: picture.height
-                }));
+        }));
         hasMorePages = albumsData.hasNextPage;
     }
 
     // 初始化原生JavaScript事件
     function initializeEventDelegation() {
+        // 清理之前的事件监听器
+        removeEventListeners();
+
         // 使用原生事件委托处理图片卡片按钮
-        document.addEventListener('click', function(e) {
+        eventListeners.click = function(e) {
             const target = e.target.closest('.albums-view-btn, .albums-download-btn, .albums-share-btn');
             if (!target) return;
 
@@ -191,21 +202,48 @@
                 const description = target.getAttribute('data-description');
                 sharePicture(url, description);
             }
-        });
+        };
+        document.addEventListener('click', eventListeners.click);
 
         // 图片加载事件
-        document.addEventListener('load', function(e) {
+        eventListeners.load = function(e) {
             if (e.target.classList.contains('albums-picture-image-v2')) {
                 albumsImageLoaded(e.target);
             }
-        }, true);
+        };
+        document.addEventListener('load', eventListeners.load, true);
 
         // 图片错误事件
-        document.addEventListener('error', function(e) {
+        eventListeners.error = function(e) {
             if (e.target.classList.contains('albums-picture-image-v2')) {
                 albumsImageError(e.target);
             }
-        }, true);
+        };
+        document.addEventListener('error', eventListeners.error, true);
+    }
+
+    // 移除事件监听器
+    function removeEventListeners() {
+        if (eventListeners.click) {
+            document.removeEventListener('click', eventListeners.click);
+            eventListeners.click = null;
+        }
+        if (eventListeners.load) {
+            document.removeEventListener('load', eventListeners.load, true);
+            eventListeners.load = null;
+        }
+        if (eventListeners.error) {
+            document.removeEventListener('error', eventListeners.error, true);
+            eventListeners.error = null;
+        }
+        if (eventListeners.resize) {
+            window.removeEventListener('resize', eventListeners.resize);
+            eventListeners.resize = null;
+        }
+        if (eventListeners.scroll) {
+            window.removeEventListener('scroll', eventListeners.scroll);
+            eventListeners.scroll = null;
+        }
     }
 
     // 初始化瀑布流
@@ -215,17 +253,18 @@
         existingCards.forEach((card, index) => {
             card.style.animationDelay = `${index * config.animationDelay}ms`;
         });
-        
+
         // 监听窗口大小变化，重新调整布局
         let resizeTimeout = null;
-        window.addEventListener('resize', () => {
+        eventListeners.resize = () => {
             if (resizeTimeout) {
                 clearTimeout(resizeTimeout);
             }
             resizeTimeout = setTimeout(() => {
                 adjustMasonryLayout();
             }, 300);
-        });
+        };
+        window.addEventListener('resize', eventListeners.resize);
     }
 
     // 调整瀑布流布局
@@ -233,7 +272,7 @@
         // 这里可以根据窗口大小调整瀑布流的列数
         const containerWidth = masonryContainer.offsetWidth;
         const cards = masonryContainer.querySelectorAll('.albums-picture-card-v2');
-        
+
         // 重新设置动画延迟
         cards.forEach((card, index) => {
             card.style.animationDelay = `${index * (config.animationDelay / 2)}ms`;
@@ -252,7 +291,7 @@
             sentinel.style.position = 'relative';
             sentinel.style.clear = 'both';
             sentinel.style.backgroundColor = 'transparent';
-            
+
             // 将 sentinel 放在加载指示器之前
             const loadingElement = document.getElementById('albumsLoading');
             if (loadingElement && loadingElement.parentNode) {
@@ -265,7 +304,7 @@
                     document.body.appendChild(sentinel);
                 }
             }
-            
+
             observerInstance = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting && hasMorePages && !isLoading) {
@@ -277,19 +316,20 @@
                 rootMargin: `${config.loadThreshold}px`,
                 threshold: 0.01
             });
-            
+
             observerInstance.observe(sentinel);
         } else {
             // 降级到传统滚动监听
             let scrollTimeout = null;
-            window.addEventListener('scroll', () => {
+            eventListeners.scroll = () => {
                 if (scrollTimeout) {
                     clearTimeout(scrollTimeout);
                 }
                 scrollTimeout = setTimeout(() => {
                     checkLoadMore();
                 }, 100);
-            });
+            };
+            window.addEventListener('scroll', eventListeners.scroll);
         }
     }
 
@@ -298,10 +338,10 @@
         const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
         const windowHeight = window.innerHeight;
         const documentHeight = document.documentElement.scrollHeight;
-        
+
         // 计算到底部的距离
         const distanceToBottom = documentHeight - (scrollTop + windowHeight);
-        
+
         if (distanceToBottom <= config.loadThreshold && hasMorePages && !isLoading) {
             loadMoreImages();
         }
@@ -311,7 +351,7 @@
     function updateSentinelPosition() {
         const sentinel = document.getElementById('albums-sentinel');
         if (!sentinel) return;
-        
+
         const loadingElement = document.getElementById('albumsLoading');
         if (loadingElement && loadingElement.parentNode && sentinel.parentNode) {
             // 确保 sentinel 在 loading 元素之前
@@ -327,7 +367,7 @@
             observerInstance.disconnect();
             observerInstance = null;
         }
-        
+
         const sentinel = document.getElementById('albums-sentinel');
         if (sentinel && sentinel.parentNode) {
             sentinel.parentNode.removeChild(sentinel);
@@ -337,32 +377,32 @@
     // 加载更多图片
     async function loadMoreImages() {
         if (isLoading || !hasMorePages) return;
-        
+
         isLoading = true;
         showLoadingIndicator();
-        
+
         try {
             const nextPage = albumsData.currentPage + 1;
             const response = await fetch(`/pages/albums?pageIndex=${nextPage}&pageSize=${albumsData.pageSize}`);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const data = await response.json();
-            
-                         // 更新页面数据
-             albumsData.currentPage = data.currentPageIndex;
-             albumsData.hasNextPage = data.totalPageCount > data.currentPageIndex;
-             hasMorePages = data.totalPageCount > data.currentPageIndex;
-            
+
+            // 更新页面数据
+            albumsData.currentPage = data.currentPageIndex;
+            albumsData.hasNextPage = data.totalPageCount > data.currentPageIndex;
+            hasMorePages = data.totalPageCount > data.currentPageIndex;
+
             // 更新统计信息
             updateStatistics(data.totalItemCount, data.currentPageIndex, data.PageCount);
-            
+
             // 渲染新图片
             if (data.items.length > 0) {
                 await renderNewImages(data.items);
-                
+
                 // 更新所有图片列表，确保数据结构一致
                 const newImages = data.items.map(item => ({
                     id: item.Id || item.id,
@@ -373,7 +413,7 @@
                 }));
                 allImages = allImages.concat(newImages);
             }
-            
+
             // 延迟隐藏加载指示器
             setTimeout(() => {
                 hideLoadingIndicator();
@@ -386,7 +426,7 @@
                     updateSentinelPosition();
                 }
             }, config.loadDelay);
-            
+
         } catch (error) {
             console.error('Failed to load more images:', error);
             hideLoadingIndicator();
@@ -399,17 +439,17 @@
     // 渲染新图片
     async function renderNewImages(pictures) {
         const fragment = document.createDocumentFragment();
-        
+
         for (let i = 0; i < pictures.length; i++) {
             const picture = pictures[i];
             const cardElement = createPictureCard(picture);
-            
+
             // 设置动画延迟
             cardElement.style.animationDelay = `${i * config.animationDelay}ms`;
-            
+
             fragment.appendChild(cardElement);
         }
-        
+
         masonryContainer.appendChild(fragment);
     }
 
@@ -417,7 +457,7 @@
     function createPictureCard(picture) {
         const card = document.createElement('div');
         card.className = 'albums-picture-card-v2';
-        
+
         // 统一数据属性访问
         const id = picture.Id || picture.id;
         const accessUrl = picture.AccessUrl || picture.accessUrl;
@@ -428,24 +468,24 @@
         const creator = picture.Creator || picture.creator;
         const length = picture.Length || picture.length;
         const uploadTime = picture.UploadTime || picture.uploadTime;
-        
+
         card.setAttribute('data-id', id);
-        
-        const tagsHtml = tags && tags.length > 0 
+
+        const tagsHtml = tags && tags.length > 0
             ? `<div class="albums-picture-tags-v2">
                 ${tags.map(tag => `<span class="ds-badge ds-badge-primary albums-tag-v2">#${tag}</span>`).join('')}
                </div>`
             : '';
-        
-        const descriptionHtml = description 
+
+        const descriptionHtml = description
             ? `<div class="albums-picture-description-v2">
                 <p class="ds-text-body">${escapeHtml(description)}</p>
                </div>`
             : '';
-        
+
         const avatarSrc = (creator?.Avatar || creator?.avatar) || '/core/images/default-avatar.png';
         const fileSize = (length / 1024.0 / 1024.0).toFixed(2);
-        
+
         card.innerHTML = `
             <div class="albums-picture-wrapper-v2">
                 <img 
@@ -494,7 +534,7 @@
                 </div>
             </div>
         `;
-        
+
         return card;
     }
 
@@ -502,7 +542,7 @@
     function updateStatistics(totalCount, currentPage, totalPages) {
         const totalCountElement = document.getElementById('totalCount');
         const currentPageElement = document.getElementById('currentPage');
-        
+
         if (totalCountElement) {
             totalCountElement.textContent = totalCount;
         }
@@ -548,7 +588,7 @@
     // 初始化模态框
     function initializeModal() {
         if (!modal || !imageContainer || !modalImage) return;
-        
+
         // 阻止模态框内容区域的点击事件冒泡
         const modalContent = modal.querySelector('.albums-modal-content-v2');
         if (modalContent) {
@@ -556,10 +596,10 @@
                 e.stopPropagation();
             });
         }
-        
+
         // 初始化缩放和拖拽功能
         initializeZoomAndDrag();
-        
+
         // 更新导航按钮状态
         updateModalNavigation();
     }
@@ -568,44 +608,44 @@
     function initializeZoomAndDrag() {
         // 鼠标滚轮缩放
         imageContainer.addEventListener('wheel', handleWheel, { passive: false });
-        
+
         // 鼠标拖拽
         modalImage.addEventListener('mousedown', handleMouseDown);
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
-        
+
         // 触摸事件（双指缩放和拖拽）
         imageContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
         imageContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
         imageContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
-        
+
         // 双击重置缩放
         modalImage.addEventListener('dblclick', resetZoom);
     }
 
     // 滚轮事件节流器
     let wheelTimeout = null;
-    
+
     // 鼠标滚轮缩放处理
     function handleWheel(e) {
         e.preventDefault();
-        
+
         // 清除之前的超时
         if (wheelTimeout) {
             clearTimeout(wheelTimeout);
         }
-        
+
         wheelTimeout = setTimeout(() => {
             const rect = imageContainer.getBoundingClientRect();
-            
+
             // 计算鼠标相对于容器的位置
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
-            
+
             // 计算缩放因子
             const delta = e.deltaY * -zoomConfig.wheelZoomSensitivity;
             const scaleFactor = Math.exp(delta);
-            
+
             zoomImage(scaleFactor, mouseX, mouseY);
         }, 16); // 约60fps
     }
@@ -613,26 +653,26 @@
     // 缩放图片
     function zoomImage(scaleFactor, centerX, centerY) {
         const newScale = Math.max(zoomConfig.minScale, Math.min(zoomConfig.maxScale, currentScale * scaleFactor));
-        
+
         if (newScale !== currentScale) {
             // 计算缩放中心点
             const scaleChange = newScale / currentScale;
             const rect = imageContainer.getBoundingClientRect();
-            
+
             // 如果没有指定中心点，使用图片中心
             if (centerX === undefined || centerY === undefined) {
                 centerX = rect.width / 2;
                 centerY = rect.height / 2;
             }
-            
+
             // 计算新的位移
             const newTranslateX = centerX - (centerX - currentTranslateX) * scaleChange;
             const newTranslateY = centerY - (centerY - currentTranslateY) * scaleChange;
-            
+
             currentScale = newScale;
             currentTranslateX = newTranslateX;
             currentTranslateY = newTranslateY;
-            
+
             updateImageTransform();
             updateZoomState();
         }
@@ -657,35 +697,35 @@
     // 鼠标按下处理
     function handleMouseDown(e) {
         if (currentScale <= 1) return;
-        
+
         e.preventDefault();
         isDragging = true;
         dragStartX = e.clientX;
         dragStartY = e.clientY;
         dragStartTranslateX = currentTranslateX;
         dragStartTranslateY = currentTranslateY;
-        
+
         imageContainer.classList.add('dragging');
     }
 
     // 鼠标移动处理
     function handleMouseMove(e) {
         if (!isDragging) return;
-        
+
         e.preventDefault();
         const deltaX = e.clientX - dragStartX;
         const deltaY = e.clientY - dragStartY;
-        
+
         currentTranslateX = dragStartTranslateX + deltaX / currentScale;
         currentTranslateY = dragStartTranslateY + deltaY / currentScale;
-        
+
         updateImageTransform();
     }
 
     // 鼠标松开处理
     function handleMouseUp(e) {
         if (!isDragging) return;
-        
+
         isDragging = false;
         imageContainer.classList.remove('dragging');
     }
@@ -720,10 +760,10 @@
             e.preventDefault();
             const deltaX = e.touches[0].clientX - dragStartX;
             const deltaY = e.touches[0].clientY - dragStartY;
-            
+
             currentTranslateX = dragStartTranslateX + deltaX / currentScale;
             currentTranslateY = dragStartTranslateY + deltaY / currentScale;
-            
+
             updateImageTransform();
         } else if (e.touches.length === 2) {
             // 双指缩放
@@ -734,16 +774,16 @@
                 Math.pow(touch2.clientX - touch1.clientX, 2) +
                 Math.pow(touch2.clientY - touch1.clientY, 2)
             );
-            
+
             if (lastTouchDistance > 0) {
                 const scaleFactor = distance / lastTouchDistance;
                 const centerX = (touch1.clientX + touch2.clientX) / 2;
                 const centerY = (touch1.clientY + touch2.clientY) / 2;
                 const rect = imageContainer.getBoundingClientRect();
-                
+
                 zoomImage(scaleFactor, centerX - rect.left, centerY - rect.top);
             }
-            
+
             lastTouchDistance = distance;
         }
     }
@@ -782,7 +822,7 @@
                 rootMargin: '50px',
                 threshold: 0.1
             });
-            
+
             // 观察所有需要懒加载的图片
             const lazyImages = document.querySelectorAll('img[data-src]');
             lazyImages.forEach(img => {
@@ -816,7 +856,7 @@
     function albumsImageError(img) {
         img.style.opacity = '0.5';
         img.alt = '图片加载失败';
-        
+
         // 尝试重新加载
         let retryCount = parseInt(img.dataset.retryCount || '0');
         if (retryCount < config.maxRetries) {
@@ -833,15 +873,15 @@
     // 查看图片
     function viewPicture(id, url) {
         currentImageIndex = allImages.findIndex(img => img.id === id);
-        
+
         if (currentImageIndex === -1) {
             currentImageIndex = 0;
         }
-        
+
         showModal(url);
     }
 
-            // 模态框事件监听器引用（用于清理）
+    // 模态框事件监听器引用（用于清理）
     let modalEventListeners = {
         closeBtn: null,
         prevBtn: null,
@@ -856,54 +896,54 @@
             console.error('Modal or modalImage not found');
             return;
         }
-        
+
         // 显示加载状态
         showModalLoading();
-        
+
         // 预加载图片
         const img = new Image();
         img.onload = function() {
             // 图片加载完成后显示
             modalImage.src = imageUrl;
             modalImage.classList.add('fade-in');
-            
+
             // 延迟隐藏加载状态
             setTimeout(() => {
                 hideModalLoading();
             }, 200);
-            
+
             // 动画完成后清理类名
             setTimeout(() => {
                 modalImage.classList.remove('fade-in');
             }, 300);
         };
-        
+
         img.onerror = function() {
             // 图片加载失败时直接显示
             modalImage.src = imageUrl;
             hideModalLoading();
         };
-        
+
         img.src = imageUrl;
-        
+
         // 显示模态框
         modal.style.display = 'flex';
         modal.classList.remove('closing');
-        
+
         // 使用 requestAnimationFrame 确保动画流畅
         requestAnimationFrame(() => {
             modal.classList.add('show');
         });
-        
+
         // 绑定模态框事件监听器
         bindModalEvents();
-        
+
         // 预加载前后图片
         preloadAdjacentImages();
-        
+
         // 更新导航按钮
         updateModalNavigation();
-        
+
         // 禁用页面滚动
         document.body.style.overflow = 'hidden';
     }
@@ -923,13 +963,13 @@
             modalEventListeners.closeBtn = function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 // 添加按钮点击效果
                 closeBtn.style.transform = 'scale(0.95)';
                 setTimeout(() => {
                     closeBtn.style.transform = '';
                 }, 150);
-                
+
                 // 延迟关闭以显示点击效果
                 setTimeout(() => {
                     closeModal();
@@ -944,18 +984,18 @@
             modalEventListeners.prevBtn = function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 // 防止频繁点击
                 if (prevBtnTimeout) {
                     clearTimeout(prevBtnTimeout);
                 }
-                
+
                 // 添加按钮点击效果
                 prevBtn.style.transform = 'scale(0.95)';
                 setTimeout(() => {
                     prevBtn.style.transform = '';
                 }, 150);
-                
+
                 prevBtnTimeout = setTimeout(() => {
                     showPreviousImage();
                 }, 100);
@@ -969,18 +1009,18 @@
             modalEventListeners.nextBtn = function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 // 防止频繁点击
                 if (nextBtnTimeout) {
                     clearTimeout(nextBtnTimeout);
                 }
-                
+
                 // 添加按钮点击效果
                 nextBtn.style.transform = 'scale(0.95)';
                 setTimeout(() => {
                     nextBtn.style.transform = '';
                 }, 150);
-                
+
                 nextBtnTimeout = setTimeout(() => {
                     showNextImage();
                 }, 100);
@@ -1006,7 +1046,7 @@
                 if (keyboardTimeout) {
                     clearTimeout(keyboardTimeout);
                 }
-                
+
                 switch(e.key) {
                     case 'Escape':
                         closeModal();
@@ -1034,23 +1074,23 @@
         let touchEndX = 0;
         let touchEndY = 0;
         const minSwipeDistance = 50;
-        
+
         modalEventListeners.touchStart = function(e) {
             touchStartX = e.touches[0].clientX;
             touchStartY = e.touches[0].clientY;
         };
-        
+
         modalEventListeners.touchMove = function(e) {
             e.preventDefault(); // 防止页面滚动
         };
-        
+
         modalEventListeners.touchEnd = function(e) {
             touchEndX = e.changedTouches[0].clientX;
             touchEndY = e.changedTouches[0].clientY;
-            
+
             const deltaX = touchEndX - touchStartX;
             const deltaY = touchEndY - touchStartY;
-            
+
             // 只有横向滑动距离大于纵向滑动距离时才切换图片
             if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
                 if (deltaX > 0) {
@@ -1062,7 +1102,7 @@
                 }
             }
         };
-        
+
         if (modal) {
             modal.addEventListener('touchstart', modalEventListeners.touchStart);
             modal.addEventListener('touchmove', modalEventListeners.touchMove);
@@ -1092,7 +1132,7 @@
         if (modalEventListeners.keyboard) {
             document.removeEventListener('keydown', modalEventListeners.keyboard);
         }
-        
+
         // 清理触摸事件监听器
         if (modal) {
             if (modalEventListeners.touchStart) {
@@ -1125,28 +1165,28 @@
             console.error('Modal not found');
             return;
         }
-        
+
         // 清理事件监听器
         unbindModalEvents();
-        
+
         // 重置缩放状态
         resetZoom();
-        
+
         // 添加关闭动画
         modal.classList.remove('show');
         modal.classList.add('closing');
-        
+
         // 动画完成后隐藏模态框
         setTimeout(() => {
             modal.style.display = 'none';
             modal.classList.remove('closing');
-            
+
             // 清理图片状态
             modalImage.classList.remove('fade-in', 'slide-in-left', 'slide-in-right', 'fading', 'loading', 'zoomed');
             imageContainer.classList.remove('zoomed', 'dragging');
             hideModalLoading();
         }, 300);
-        
+
         // 恢复页面滚动
         document.body.style.overflow = '';
     }
@@ -1173,48 +1213,48 @@
         if (modalImage.classList.contains('fading') || modalImage.classList.contains('loading')) {
             return;
         }
-        
+
         // 重置缩放状态
         resetZoom();
-        
+
         // 显示加载状态
         showModalLoading();
-        
+
         // 预加载新图片
         const img = new Image();
         img.onload = function() {
             // 开始切换动画
             modalImage.classList.add('fading');
-            
+
             setTimeout(() => {
                 // 更新图片源
                 modalImage.src = newImageUrl;
-                
+
                 // 添加进入动画
                 modalImage.classList.remove('fading');
                 modalImage.classList.add(direction === 'left' ? 'slide-in-left' : 'slide-in-right');
-                
+
                 // 隐藏加载状态
                 hideModalLoading();
-                
+
                 // 动画完成后清理类名
                 setTimeout(() => {
                     modalImage.classList.remove('slide-in-left', 'slide-in-right');
                 }, 300);
             }, 150);
         };
-        
+
         img.onerror = function() {
             // 图片加载失败时直接切换
             modalImage.src = newImageUrl;
             hideModalLoading();
         };
-        
+
         img.src = newImageUrl;
-        
+
         // 更新导航按钮
         updateModalNavigation();
-        
+
         // 预加载前后图片
         preloadAdjacentImages();
     }
@@ -1225,7 +1265,7 @@
             console.error('Navigation buttons not found');
             return;
         }
-        
+
         modalPrevBtn.disabled = currentImageIndex <= 0;
         modalNextBtn.disabled = currentImageIndex >= allImages.length - 1;
     }
@@ -1234,17 +1274,17 @@
     function preloadAdjacentImages() {
         // 预加载当前图片的前后各2张图片
         const preloadIndexes = [
-            currentImageIndex - 2, 
-            currentImageIndex - 1, 
-            currentImageIndex + 1, 
+            currentImageIndex - 2,
+            currentImageIndex - 1,
+            currentImageIndex + 1,
             currentImageIndex + 2
         ];
-        
+
         preloadIndexes.forEach(index => {
             if (index >= 0 && index < allImages.length) {
                 const img = new Image();
                 img.src = allImages[index].url;
-                
+
                 // 设置图片加载优先级
                 if (Math.abs(index - currentImageIndex) === 1) {
                     // 相邻图片设置高优先级
@@ -1281,11 +1321,11 @@
             link.download = `image_${id}_${Date.now()}.jpg`;
             link.target = '_blank';
             link.rel = 'noopener noreferrer';
-            
+
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
+
             showSuccessMessage('图片下载开始');
         } catch (error) {
             console.error('Download failed:', error);
@@ -1327,7 +1367,7 @@
             document.body.appendChild(textArea);
             textArea.focus();
             textArea.select();
-            
+
             try {
                 document.execCommand('copy');
                 return Promise.resolve();
@@ -1368,14 +1408,14 @@
             transform: translateX(100%);
             transition: transform 0.3s ease;
         `;
-        
+
         document.body.appendChild(messageElement);
-        
+
         // 显示动画
         setTimeout(() => {
             messageElement.style.transform = 'translateX(0)';
         }, 100);
-        
+
         // 自动隐藏
         setTimeout(() => {
             messageElement.style.transform = 'translateX(100%)';
@@ -1400,7 +1440,7 @@
             const now = new Date();
             const diff = now - date;
             const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            
+
             if (days === 0) {
                 return '今天';
             } else if (days === 1) {
@@ -1429,21 +1469,24 @@
             observerInstance.disconnect();
             observerInstance = null;
         }
-        
+
         // 清理 sentinel 元素
         const sentinel = document.getElementById('albums-sentinel');
         if (sentinel && sentinel.parentNode) {
             sentinel.parentNode.removeChild(sentinel);
         }
-        
+
         // 清理模态框事件监听器
         unbindModalEvents();
-        
+
         // 关闭模态框（如果打开）
         if (modal && modal.style.display !== 'none') {
             closeModal();
         }
-        
+
+        // 移除事件监听器
+        removeEventListeners();
+
         // 重置全局变量
         isLoading = false;
         hasMorePages = true;
@@ -1453,7 +1496,17 @@
         currentTranslateX = 0;
         currentTranslateY = 0;
         isDragging = false;
-        
+
+        // 重置相册数据
+        albumsData = {
+            currentPage: 1,
+            pageSize: 20,
+            totalPages: 1,
+            totalCount: 0,
+            hasNextPage: false,
+            pictures: []
+        };
+
         // 重置 DOM 元素引用
         loadingElement = null;
         noMoreElement = null;
@@ -1463,11 +1516,7 @@
         modalPrevBtn = null;
         modalNextBtn = null;
         imageContainer = null;
-        
-        // 移除事件监听器
-        window.removeEventListener('resize', adjustMasonryLayout);
-        window.removeEventListener('scroll', checkLoadMore);
-        
+
         // 恢复页面滚动
         document.body.style.overflow = '';
     }
@@ -1483,12 +1532,12 @@
         if (!document.querySelector('.albums-container-v2')) {
             return false;
         }
-        
+
         // 如果已经初始化过，先清理
         if (observerInstance || modal) {
             cleanup();
         }
-        
+
         try {
             init();
             return true;
