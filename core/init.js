@@ -38,7 +38,7 @@ if (dpzOption.isDark) {
         console.warn(`get user info fail. error:${e}`);
     }
 
-    let viewImages = ".article.shadow .article-left img,.mumble-list .mumble-item .mumble-content img,.article-detail-content img,#cd-timeline .content img";
+    let viewImages = ".article.shadow .article-left img,.mumble-list .mumble-item .mumble-content img,.article-detail-content img,#cd-timeline .content img,.mumble-item img";
     //图片查看
     $(document).delegate(viewImages, "click", function () {
         let index = layer.load(1);
