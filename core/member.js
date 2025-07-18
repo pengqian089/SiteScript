@@ -23,7 +23,8 @@ const CONSTANTS = {
     // 分页配置
     PAGINATION: {
         DEFAULT_PAGE_SIZE: 10,
-        DEFAULT_PAGE_NUM: 1
+        DEFAULT_PAGE_NUM: 1,
+        MAX_VISIBLE_PAGES: 5
     },
 
     // 响应式断点
@@ -187,9 +188,9 @@ class MemberCenter {
     initialize() {
         try {
             this.bindEvents();
-            this.loadUserInfo();
+            this.loadUserInfo().then();
             this.initTheme();
-            this.initPageFromHash();
+            this.initPageFromHash().then();
             this.initLayoutVisibility();
         } catch (error) {
             console.error('初始化失败:', error);
@@ -232,16 +233,16 @@ class MemberCenter {
      */
     bindNavigationEvents() {
         // 导航切换
-        $(CONSTANTS.SELECTORS.navItemLink).on('click', (e) => {
+        $(CONSTANTS.SELECTORS.navItemLink).on('click', async (e) => {
             e.preventDefault();
             const page = $(e.currentTarget).parent().data('page');
-            this.switchPage(page);
+            await this.switchPage(page);
             this.closeMobileMenu();
         });
 
         // 监听hash变化
-        $(window).on('hashchange', () => {
-            this.handleHashChange();
+        $(window).on('hashchange', async () => {
+            await this.handleHashChange();
         });
     }
 
@@ -264,14 +265,16 @@ class MemberCenter {
      * 绑定个人资料相关事件
      */
     bindProfileEvents() {
+        const $avatarFile = $('#avatarFile');
         $('#saveProfile').on('click', () => this.saveProfile());
         $('#logout').on('click', () => this.logout());
-        $('#uploadAvatar').on('click', () => $('#avatarFile').click());
-        $('#avatarFile').on('change', (e) => this.handleAvatarUpload(e));
-        $('#bindTwoFactor').on('click', () => this.showTwoFactorModal());
+        $('#uploadAvatar').on('click', () => $avatarFile.click());
+        $avatarFile.on('change', async (e) => await this.handleAvatarUpload(e));
+        $('#bindTwoFactor').on('click', async () => await this.showTwoFactorModal());
         $('#closeTwoFactorModal').on('click', () => this.hideTwoFactorModal());
-        $('#confirmTwoFactor').on('click', () => this.confirmTwoFactor());
+        $('#confirmTwoFactor').on('click', async () => await this.confirmTwoFactor());
         $('#copySecretKey').on('click', () => this.copySecretKey());
+        $('#cancelTwoFactor').on('click', () => this.hideTwoFactorModal());
     }
 
     /**
@@ -335,7 +338,7 @@ class MemberCenter {
     /**
      * 处理Hash变化
      */
-    handleHashChange() {
+    async handleHashChange() {
         try {
             // 解析新的URL参数
             const hash = window.location.hash.substring(1);
@@ -357,10 +360,10 @@ class MemberCenter {
 
                 if (pageChanged) {
                     // 页面类型变化，完全重新初始化
-                    this.initPageFromHash();
+                    await this.initPageFromHash();
                 } else {
                     // 只是分页参数变化，只重新加载数据
-                    this.loadPageData();
+                    await this.loadPageData();
                 }
             }
         } catch (error) {
@@ -371,14 +374,17 @@ class MemberCenter {
     /**
      * 页面切换
      * @param {string} page - 页面标识
+     * @param {boolean} resetPageIndex - 是否重置页码（默认为true，在页面类型变化时重置）
      */
-    switchPage(page) {
+    async switchPage(page, resetPageIndex = true) {
         if (!this.isValidPage(page)) {
             console.warn('无效的页面标识:', page);
             return;
         }
 
         try {
+            // 检查是否是页面类型变化
+            const isPageChanged = page !== this.state.currentPage;
             // 更新导航状态
             $(CONSTANTS.SELECTORS.navItem).removeClass('active');
             $(`.nav-item[data-page="${page}"]`).addClass('active');
@@ -386,13 +392,17 @@ class MemberCenter {
             // 更新页面显示状态
             $(CONSTANTS.SELECTORS.contentPage).removeClass('active');
             $(`#${page}-page`).addClass('active');
+            // 如果是页面类型变化且需要重置页码，重置到第1页
+            if (isPageChanged && resetPageIndex) {
+                this.state.currentPageNum = CONSTANTS.PAGINATION.DEFAULT_PAGE_NUM;
+            }
 
             // 更新状态
             this.state.currentPage = page;
 
             // 更新面包屑和数据
             this.updateBreadcrumb(page);
-            this.loadPageData();
+            await this.loadPageData();
 
             // 更新URL
             this.updateURL(page, this.state.currentPageNum, this.state.pageSize);
@@ -423,7 +433,7 @@ class MemberCenter {
     /**
      * 从锚点初始化页面
      */
-    initPageFromHash() {
+    async initPageFromHash() {
         try {
             const hash = window.location.hash.substring(1);
             const validPages = Object.values(CONSTANTS.PAGES);
@@ -436,19 +446,22 @@ class MemberCenter {
                 // 更新分页参数
                 if (params.pageIndex) {
                     this.state.currentPageNum = parseInt(params.pageIndex) || CONSTANTS.PAGINATION.DEFAULT_PAGE_NUM;
+                } else {
+                    // 如果URL中没有指定页码，默认为第1页
+                    this.state.currentPageNum = CONSTANTS.PAGINATION.DEFAULT_PAGE_NUM;
                 }
                 if (params.pageSize) {
                     this.state.pageSize = parseInt(params.pageSize) || CONSTANTS.PAGINATION.DEFAULT_PAGE_SIZE;
                 }
 
-                this.switchPage(page);
+                await this.switchPage(page, false);
             } else {
                 // 默认显示profile页面
-                this.switchPage(CONSTANTS.PAGES.PROFILE);
+                await this.switchPage(CONSTANTS.PAGES.PROFILE);
             }
         } catch (error) {
             console.error('从Hash初始化页面失败:', error);
-            this.switchPage(CONSTANTS.PAGES.PROFILE);
+            await this.switchPage(CONSTANTS.PAGES.PROFILE);
         }
     }
 
@@ -521,19 +534,11 @@ class MemberCenter {
      * 加载用户信息
      * 从API获取用户信息并更新界面
      */
-    loadUserInfo() {
+    async loadUserInfo() {
         try {
             // 模拟加载用户信息
-            const userInfo = {
-                account: 'user123',
-                nickname: '测试用户',
-                gender: 'male',
-                signature: '这是一个测试签名',
-                avatar: '../core/images/laola.png',
-                email: 'user@example.com',
-                twoFactorEnabled: false
-            };
-
+            const response = await fetch('/my/info');
+            const userInfo = await response.json();
             // 缓存用户信息
             this.dataCache.userInfo = userInfo;
 
@@ -557,7 +562,7 @@ class MemberCenter {
             '#gender': userInfo.gender,
             '#signature': userInfo.signature,
             '#userName': userInfo.nickname,
-            '#userEmail': userInfo.email
+            '#userEmail': userInfo.signature
         };
 
         // 批量更新表单元素
@@ -694,7 +699,7 @@ class MemberCenter {
      * 处理头像上传
      * @param {Event} event - 文件选择事件
      */
-    handleAvatarUpload(event) {
+    async handleAvatarUpload(event) {
         try {
             const file = event.target.files[0];
             if (!file) return;
@@ -704,7 +709,7 @@ class MemberCenter {
             }
 
             this.previewImage(file);
-            this.uploadImage(file);
+            await this.uploadImage(file);
         } catch (error) {
             console.error('头像上传失败:', error);
             this.showMessage('头像上传失败', 'error');
@@ -747,26 +752,34 @@ class MemberCenter {
      * 上传图片
      * @param {File} file - 文件对象
      */
-    uploadImage(file) {
+    async uploadImage(file) {
         this.showLoading();
 
-        // 模拟上传
-        this.mockApiCall(() => {
-            this.hideLoading();
-            this.showMessage('头像上传成功', 'success');
-        }, CONSTANTS.DELAYS.UPLOAD);
+        const form = new FormData();
+        form.append('avatar', file);
+        const response = await fetch('/Account/UpdateAvatar', {
+            method: 'POST',
+            body: form,
+        });
+        const result = await response.json();
+        this.hideLoading();
+        if (!result.success) {
+            this.showMessage(result.msg, 'error');
+            return;
+        }
+        this.showMessage('头像上传成功', 'success');
     }
 
     /**
      * 显示双因素验证模态框
      * 根据当前绑定状态显示相应的操作界面
      */
-    showTwoFactorModal() {
+    async showTwoFactorModal() {
         try {
             const isEnabled = $('.status-text').text() === '已绑定';
             const modalConfig = this.getTwoFactorModalConfig(isEnabled);
 
-            this.setupTwoFactorModal(modalConfig, isEnabled);
+            await this.setupTwoFactorModal(modalConfig, isEnabled);
             $(CONSTANTS.SELECTORS.twoFactorModal).show();
         } catch (error) {
             console.error('显示双因素验证模态框失败:', error);
@@ -798,14 +811,14 @@ class MemberCenter {
      * @param {Object} config - 模态框配置
      * @param {boolean} isEnabled - 是否已启用
      */
-    setupTwoFactorModal(config, isEnabled) {
+    async setupTwoFactorModal(config, isEnabled) {
         $('#modalTitle').text(config.title);
         $('.pin-section label').text(config.pinLabel);
         $('#confirmTwoFactor').text(config.confirmText);
 
         if (config.showQrSection) {
             $('.qr-section').show();
-            this.generateTwoFactorData();
+            await this.generateTwoFactorData();
         } else {
             $('.qr-section').hide();
         }
@@ -823,30 +836,24 @@ class MemberCenter {
      * 生成双因素验证数据
      * 生成密钥和二维码
      */
-    generateTwoFactorData() {
+    async generateTwoFactorData() {
         try {
-            const secretKey = this.generateSecretKey();
-            $('#secretKey').val(secretKey);
+            const response = await fetch('/my/two-factor');
+            const data = await response.json();
+            $('#secretKey').val(data.manualEntryKey);
 
             // 生成二维码（这里使用占位符）
-            $('#qrCode').html('<div style="padding: 20px; color: #666;">二维码占位符</div>');
+            $('#qrCode').html(
+                `
+                <div style="padding: 20px; color: #666;">
+                    <img src="${data.qrCodeSetupImageUrl}" alt="twoFactorQrCode"/>
+                </div>
+                `
+            );
         } catch (error) {
             console.error('生成双因素验证数据失败:', error);
             this.showMessage('生成验证数据失败', 'error');
         }
-    }
-
-    /**
-     * 生成密钥
-     * @returns {string} 32位随机密钥
-     */
-    generateSecretKey() {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-        let result = '';
-        for (let i = 0; i < 32; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return result;
     }
 
     /**
@@ -894,7 +901,7 @@ class MemberCenter {
      * 确认双因素验证操作
      * 处理绑定或解绑操作
      */
-    confirmTwoFactor() {
+    async confirmTwoFactor() {
         try {
             const pinCode = $('#pinCode').val().trim();
 
@@ -904,19 +911,27 @@ class MemberCenter {
 
             const isEnabled = $('.status-text').text() === '已绑定';
 
-            this.showLoading();
-            this.mockApiCall(() => {
-                this.hideLoading();
-                this.hideTwoFactorModal();
+            const fetchUrl = isEnabled
+                ? '/my/unbind-two-factor'
+                : '/my/bind-two-factor';
 
-                if (isEnabled) {
-                    this.updateTwoFactorStatus(false);
-                    this.showMessage('双因素验证已解绑', 'success');
-                } else {
-                    this.updateTwoFactorStatus(true);
-                    this.showMessage('双因素验证已绑定', 'success');
-                }
-            }, CONSTANTS.DELAYS.API_MOCK);
+            this.showLoading();
+            const response = await fetch(fetchUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    pinCode: pinCode
+                })
+            });
+            const result = await response.json();
+            this.hideLoading();
+            if (!result.success) {
+                this.showMessage(result.msg, 'error');
+                return;
+            }
+            this.showMessage(`双因素验证${isEnabled ? "已解绑" : "已绑定"}`, 'success');
         } catch (error) {
             console.error('双因素验证操作失败:', error);
             this.hideLoading();
@@ -949,10 +964,10 @@ class MemberCenter {
     }
 
     // 加载页面数据
-    loadPageData() {
+    async loadPageData() {
         switch (this.state.currentPage) {
             case CONSTANTS.PAGES.ARTICLES:
-                this.loadArticles();
+                await this.loadArticles();
                 break;
             case CONSTANTS.PAGES.MUMBLES:
                 this.loadMumbles();
@@ -967,7 +982,7 @@ class MemberCenter {
     }
 
     // 加载文章列表
-    loadArticles(page = null) {
+    async loadArticles(page = null) {
         this.showLoading();
         // 如果没有传入页码，使用当前页码
         if (page !== null) {
@@ -975,89 +990,107 @@ class MemberCenter {
         }
         page = this.state.currentPageNum;
 
-        // 模拟数据 - 生成50篇文章
-        const allArticles = [];
-        const titles = [
-            'JavaScript高级编程技巧',
-            'React Hooks深度解析',
-            'Vue3 Composition API实战',
-            'TypeScript类型系统详解',
-            'Node.js性能优化指南',
-            'Docker容器化部署',
-            '微服务架构设计',
-            '数据库索引优化',
-            '前端工程化实践',
-            '移动端适配方案',
-            'Web安全防护策略',
-            '算法与数据结构',
-            '设计模式实战',
-            'Git工作流管理',
-            'CI/CD自动化部署',
-            '云原生应用开发',
-            '大数据处理技术',
-            '人工智能入门',
-            '区块链技术解析',
-            '物联网应用开发',
-            '5G技术发展趋势',
-            '边缘计算实践',
-            'DevOps最佳实践',
-            '测试驱动开发',
-            '代码重构技巧',
-            '性能监控系统',
-            '日志分析工具',
-            '缓存策略优化',
-            '负载均衡配置',
-            '高可用架构设计',
-            '分布式系统设计',
-            '消息队列应用',
-            '搜索引擎优化',
-            'SEO技术指南',
-            '用户体验设计',
-            '产品经理技能',
-            '项目管理方法',
-            '团队协作工具',
-            '敏捷开发实践',
-            'Scrum方法论',
-            '看板管理',
-            '持续集成实践',
-            '自动化测试',
-            '单元测试编写',
-            '集成测试策略',
-            '端到端测试',
-            '性能测试方法',
-            '安全测试工具',
-            '代码审查流程',
-            '技术文档编写',
-        ];
+        const title = $('#articleTitleSearch').val();
+        const tag = $('#articleTagSearch').val();
 
-        const tags = ['技术', '编程', '生活', '随笔', '教程', '分享'];
-
-        for (let i = 1; i <= 50; i++) {
-            allArticles.push({
-                id: i.toString(),
-                title: titles[i - 1] || `示例文章${i}`,
-                introduction: `这是第${i}篇示例文章的简介，包含了丰富的技术内容和实践经验...`,
-                tags: [tags[Math.floor(Math.random() * tags.length)]],
-                viewCount: Math.floor(Math.random() * 10000) + 100,
-                commentCount: Math.floor(Math.random() * 200) + 10,
-                createTime: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toLocaleString()
-            });
+        try {
+            const response = await fetch(`/Article/MyArticle?pageIndex=${page}&pageSize=${this.state.pageSize}title=${encodeURIComponent(title)}&tag=${encodeURIComponent(tag)}`);
+            const result = await response.json();
+            if(!result.success){
+                this.showMessage(result.msg, 'error');
+                return;
+            }
+            this.renderArticlesData(result.data.list);
+            this.renderPagination('articles', result.data.totalPages, page);
+        } catch (e) {
+            console.error('加载文章列表失败:', e);
         }
+        this.hideLoading();
 
-        // 分页处理
-        const startIndex = (page - 1) * this.state.pageSize;
-        const endIndex = startIndex + this.state.pageSize;
-        const pageArticles = allArticles.slice(startIndex, endIndex);
-        const totalPages = Math.ceil(allArticles.length / this.state.pageSize);
 
-        setTimeout(() => {
-            // 缓存数据
-            this.dataCache.lastLoadedData['articles'] = pageArticles;
-
-            this.renderArticlesData(pageArticles);
-            this.renderPagination('articles', totalPages, page);
-            this.hideLoading();
-        }, CONSTANTS.DELAYS.LOADING);
+        // // 模拟数据 - 生成50篇文章
+        // const allArticles = [];
+        // const titles = [
+        //     'JavaScript高级编程技巧',
+        //     'React Hooks深度解析',
+        //     'Vue3 Composition API实战',
+        //     'TypeScript类型系统详解',
+        //     'Node.js性能优化指南',
+        //     'Docker容器化部署',
+        //     '微服务架构设计',
+        //     '数据库索引优化',
+        //     '前端工程化实践',
+        //     '移动端适配方案',
+        //     'Web安全防护策略',
+        //     '算法与数据结构',
+        //     '设计模式实战',
+        //     'Git工作流管理',
+        //     'CI/CD自动化部署',
+        //     '云原生应用开发',
+        //     '大数据处理技术',
+        //     '人工智能入门',
+        //     '区块链技术解析',
+        //     '物联网应用开发',
+        //     '5G技术发展趋势',
+        //     '边缘计算实践',
+        //     'DevOps最佳实践',
+        //     '测试驱动开发',
+        //     '代码重构技巧',
+        //     '性能监控系统',
+        //     '日志分析工具',
+        //     '缓存策略优化',
+        //     '负载均衡配置',
+        //     '高可用架构设计',
+        //     '分布式系统设计',
+        //     '消息队列应用',
+        //     '搜索引擎优化',
+        //     'SEO技术指南',
+        //     '用户体验设计',
+        //     '产品经理技能',
+        //     '项目管理方法',
+        //     '团队协作工具',
+        //     '敏捷开发实践',
+        //     'Scrum方法论',
+        //     '看板管理',
+        //     '持续集成实践',
+        //     '自动化测试',
+        //     '单元测试编写',
+        //     '集成测试策略',
+        //     '端到端测试',
+        //     '性能测试方法',
+        //     '安全测试工具',
+        //     '代码审查流程',
+        //     '技术文档编写',
+        // ];
+        //
+        // const tags = ['技术', '编程', '生活', '随笔', '教程', '分享'];
+        //
+        // for (let i = 1; i <= 50; i++) {
+        //     allArticles.push({
+        //         id: i.toString(),
+        //         title: titles[i - 1] || `示例文章${i}`,
+        //         introduction: `这是第${i}篇示例文章的简介，包含了丰富的技术内容和实践经验...`,
+        //         tags: [tags[Math.floor(Math.random() * tags.length)]],
+        //         viewCount: Math.floor(Math.random() * 10000) + 100,
+        //         commentCount: Math.floor(Math.random() * 200) + 10,
+        //         createTime: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toLocaleString()
+        //     });
+        // }
+        //
+        // // 分页处理
+        // const startIndex = (page - 1) * this.state.pageSize;
+        // const endIndex = startIndex + this.state.pageSize;
+        // const pageArticles = allArticles.slice(startIndex, endIndex);
+        // const totalPages = Math.ceil(allArticles.length / this.state.pageSize);
+        //
+        // setTimeout(() => {
+        //     // 缓存数据
+        //     this.dataCache.lastLoadedData['articles'] = pageArticles;
+        //
+        //     this.renderArticlesData(pageArticles);
+        //     this.renderPagination('articles', totalPages, page);
+        //     this.hideLoading();
+        // }, CONSTANTS.DELAYS.LOADING);
     }
 
     // 智能渲染文章数据
@@ -1128,81 +1161,95 @@ class MemberCenter {
             return `#${type}${queryString}`;
         };
 
-        // 上一页
-        const prevDisabled = currentPage <= 1 ? 'disabled' : '';
-        const prevUrl = prevDisabled ? '#' : generatePageUrl(currentPage - 1);
-        pagination.append(`
-            <li class="page-item ${prevDisabled}">
-                <a class="page-link" href="${prevUrl}" ${prevDisabled ? 'tabindex="-1"' : ''}>
-                    <i class="fa fa-chevron-left"></i>
-                </a>
-            </li>
-        `);
-
-        // 页码
-        const startPage = Math.max(1, currentPage - 2);
-        const endPage = Math.min(totalPages, currentPage + 2);
-
-        if (startPage > 1) {
+        // 上一页按钮
+        const prevDisabled = currentPage <= 1;
+        if (prevDisabled) {
             pagination.append(`
-                <li class="page-item">
-                    <a class="page-link" href="${generatePageUrl(1)}">1</a>
+                <li class="page-item disabled">
+                    <span class="page-link" tabindex="-1">
+                        <i class="fa fa-chevron-left"></i>
+                    </span>
                 </li>
             `);
-            if (startPage > 2) {
-                pagination.append(`
-                    <li class="page-item disabled">
-                        <span class="page-link">...</span>
-                    </li>
-                `);
+        } else {
+            pagination.append(`
+                <li class="page-item">
+                    <a class="page-link" href="${generatePageUrl(currentPage - 1)}">
+                        <i class="fa fa-chevron-left"></i>
+                    </a>
+                </li>
+            `);
+        }
+
+        // 计算要显示的页码范围（最多显示配置的页码数量）
+        const maxVisiblePages = CONSTANTS.PAGINATION.MAX_VISIBLE_PAGES;
+        let startPage = 1;
+        let endPage = totalPages;
+
+        // 如果总页数超过最大显示数量，则进行优化显示
+        if (totalPages > maxVisiblePages) {
+            const halfVisible = Math.floor(maxVisiblePages / 2);
+
+            if (currentPage <= halfVisible + 1) {
+                // 当前页在前面，显示前maxVisiblePages页
+                endPage = maxVisiblePages;
+            } else if (currentPage >= totalPages - halfVisible) {
+                // 当前页在后面，显示后maxVisiblePages页
+                startPage = totalPages - maxVisiblePages + 1;
+            } else {
+                // 当前页在中间，显示当前页前后各halfVisible页
+                startPage = currentPage - halfVisible;
+                endPage = currentPage + halfVisible;
             }
         }
 
+        // 渲染页码
         for (let i = startPage; i <= endPage; i++) {
-            const active = i === currentPage ? 'active' : '';
-            const pageUrl = active ? '#' : generatePageUrl(i);
-            pagination.append(`
-                <li class="page-item ${active}">
-                    <a class="page-link" href="${pageUrl}">${i}</a>
-                </li>
-            `);
-        }
-
-        if (endPage < totalPages) {
-            if (endPage < totalPages - 1) {
+            const isActive = i === currentPage;
+            if (isActive) {
                 pagination.append(`
-                    <li class="page-item disabled">
-                        <span class="page-link">...</span>
+                    <li class="page-item active">
+                        <span class="page-link">${i}</span>
+                    </li>
+                `);
+            } else {
+                pagination.append(`
+                    <li class="page-item">
+                        <a class="page-link" href="${generatePageUrl(i)}">${i}</a>
                     </li>
                 `);
             }
+        }
+
+        // 下一页按钮
+        const nextDisabled = currentPage >= totalPages;
+        if (nextDisabled) {
+            pagination.append(`
+                <li class="page-item disabled">
+                    <span class="page-link" tabindex="-1">
+                        <i class="fa fa-chevron-right"></i>
+                    </span>
+                </li>
+            `);
+        } else {
             pagination.append(`
                 <li class="page-item">
-                    <a class="page-link" href="${generatePageUrl(totalPages)}">${totalPages}</a>
+                    <a class="page-link" href="${generatePageUrl(currentPage + 1)}">
+                        <i class="fa fa-chevron-right"></i>
+                    </a>
                 </li>
             `);
         }
-
-        // 下一页
-        const nextDisabled = currentPage >= totalPages ? 'disabled' : '';
-        const nextUrl = nextDisabled ? '#' : generatePageUrl(currentPage + 1);
-        pagination.append(`
-            <li class="page-item ${nextDisabled}">
-                <a class="page-link" href="${nextUrl}" ${nextDisabled ? 'tabindex="-1"' : ''}>
-                    <i class="fa fa-chevron-right"></i>
-                </a>
-            </li>
-        `);
     }
 
     // 跳转到指定页面 (保留用于向后兼容，但推荐使用URL导航)
-    goToPage(type, page) {
+    async goToPage(type, page) {
         this.state.currentPageNum = page;
         this.updateURL(type, page, this.state.pageSize);
 
         switch (type) {
             case CONSTANTS.PAGES.ARTICLES:
-                this.loadArticles(page);
+                await this.loadArticles(page);
                 break;
             case CONSTANTS.PAGES.MUMBLES:
                 this.loadMumbles(page);
@@ -1894,7 +1941,7 @@ class MemberCenter {
                 : CONSTANTS.RECORDING.FALLBACK_TYPE;
 
             // 创建录音器
-            this.media.mediaRecorder = new MediaRecorder(stream, { mimeType });
+            this.media.mediaRecorder = new MediaRecorder(stream, {mimeType});
             this.media.audioChunks = [];
 
             // 设置事件处理器
@@ -1945,7 +1992,7 @@ class MemberCenter {
         try {
             // 创建音频Blob
             const mimeType = this.media.mediaRecorder.mimeType;
-            this.media.audioBlob = new Blob(this.media.audioChunks, { type: mimeType });
+            this.media.audioBlob = new Blob(this.media.audioChunks, {type: mimeType});
             this.media.audioUrl = URL.createObjectURL(this.media.audioBlob);
 
             // 创建音频元素用于播放和获取时长
@@ -2215,7 +2262,7 @@ class MemberCenter {
      * 更新录音UI状态
      */
     updateRecordingUI() {
-        const { isRecording, hasRecording, isPlaying, isPaused } = this.recordingState;
+        const {isRecording, hasRecording, isPlaying, isPaused} = this.recordingState;
 
         // 录音控制按钮
         $('#startRecording').toggle(!isRecording && !hasRecording);
@@ -2270,7 +2317,7 @@ class MemberCenter {
      * 更新播放进度
      */
     updatePlaybackProgress() {
-        const { currentTime, duration } = this.recordingState;
+        const {currentTime, duration} = this.recordingState;
 
         if (duration > 0) {
             const progress = (currentTime / duration) * 100;
@@ -2426,20 +2473,18 @@ class MemberCenter {
     confirmDelete() {
         if (this.state.currentDeleteItem) {
             this.showLoading();
-            setTimeout(() => {
+            setTimeout(async () => {
                 this.hideLoading();
                 this.hideDeleteModal();
                 this.showMessage('删除成功', 'success');
-                this.loadPageData(); // 重新加载数据
+                await this.loadPageData();
             }, CONSTANTS.DELAYS.LOADING);
         }
     }
 
     // 搜索功能
-    searchArticles() {
-        const title = $('#articleTitleSearch').val();
-        const tags = $('#articleTagSearch').val();
-        this.showMessage(`搜索文章：标题="${title}"，标签="${tags}"`, 'info');
+    async searchArticles() {
+        await this.loadArticles(CONSTANTS.PAGINATION.DEFAULT_PAGE_NUM);
     }
 
     searchMumbles() {
@@ -2485,11 +2530,11 @@ class MemberCenter {
         }
 
         this.showLoading();
-        setTimeout(() => {
+        setTimeout(async () => {
             this.hideLoading();
             this.hideModal();
             this.showMessage('文章发布成功', 'success');
-            this.loadArticles();
+            await this.loadArticles();
         }, CONSTANTS.DELAYS.LOADING);
     }
 
