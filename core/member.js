@@ -4,9 +4,8 @@
 
 /**
  * 个人中心 JavaScript
- * 支持pjax初始化和响应式设计
  * @version 2.0
- * @author 系统管理员
+ * @author pengqiang
  */
 
 // 常量配置
@@ -141,7 +140,7 @@ class MemberCenter {
         // 状态管理
         this.state = {
             currentPage: CONSTANTS.PAGES.PROFILE,
-            currentTheme: 'light',
+            currentTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
             currentPageNum: CONSTANTS.PAGINATION.DEFAULT_PAGE_NUM,
             pageSize: CONSTANTS.PAGINATION.DEFAULT_PAGE_SIZE,
             recording: false,
@@ -179,6 +178,8 @@ class MemberCenter {
 
         // 初始化
         this.initialize();
+
+        this.cherryInstance = null;
     }
 
     /**
@@ -996,7 +997,7 @@ class MemberCenter {
         try {
             const response = await fetch(`/Article/MyArticle?pageIndex=${page}&pageSize=${this.state.pageSize}title=${encodeURIComponent(title)}&tag=${encodeURIComponent(tag)}`);
             const result = await response.json();
-            if(!result.success){
+            if (!result.success) {
                 this.showMessage(result.msg, 'error');
                 return;
             }
@@ -1006,91 +1007,6 @@ class MemberCenter {
             console.error('加载文章列表失败:', e);
         }
         this.hideLoading();
-
-
-        // // 模拟数据 - 生成50篇文章
-        // const allArticles = [];
-        // const titles = [
-        //     'JavaScript高级编程技巧',
-        //     'React Hooks深度解析',
-        //     'Vue3 Composition API实战',
-        //     'TypeScript类型系统详解',
-        //     'Node.js性能优化指南',
-        //     'Docker容器化部署',
-        //     '微服务架构设计',
-        //     '数据库索引优化',
-        //     '前端工程化实践',
-        //     '移动端适配方案',
-        //     'Web安全防护策略',
-        //     '算法与数据结构',
-        //     '设计模式实战',
-        //     'Git工作流管理',
-        //     'CI/CD自动化部署',
-        //     '云原生应用开发',
-        //     '大数据处理技术',
-        //     '人工智能入门',
-        //     '区块链技术解析',
-        //     '物联网应用开发',
-        //     '5G技术发展趋势',
-        //     '边缘计算实践',
-        //     'DevOps最佳实践',
-        //     '测试驱动开发',
-        //     '代码重构技巧',
-        //     '性能监控系统',
-        //     '日志分析工具',
-        //     '缓存策略优化',
-        //     '负载均衡配置',
-        //     '高可用架构设计',
-        //     '分布式系统设计',
-        //     '消息队列应用',
-        //     '搜索引擎优化',
-        //     'SEO技术指南',
-        //     '用户体验设计',
-        //     '产品经理技能',
-        //     '项目管理方法',
-        //     '团队协作工具',
-        //     '敏捷开发实践',
-        //     'Scrum方法论',
-        //     '看板管理',
-        //     '持续集成实践',
-        //     '自动化测试',
-        //     '单元测试编写',
-        //     '集成测试策略',
-        //     '端到端测试',
-        //     '性能测试方法',
-        //     '安全测试工具',
-        //     '代码审查流程',
-        //     '技术文档编写',
-        // ];
-        //
-        // const tags = ['技术', '编程', '生活', '随笔', '教程', '分享'];
-        //
-        // for (let i = 1; i <= 50; i++) {
-        //     allArticles.push({
-        //         id: i.toString(),
-        //         title: titles[i - 1] || `示例文章${i}`,
-        //         introduction: `这是第${i}篇示例文章的简介，包含了丰富的技术内容和实践经验...`,
-        //         tags: [tags[Math.floor(Math.random() * tags.length)]],
-        //         viewCount: Math.floor(Math.random() * 10000) + 100,
-        //         commentCount: Math.floor(Math.random() * 200) + 10,
-        //         createTime: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toLocaleString()
-        //     });
-        // }
-        //
-        // // 分页处理
-        // const startIndex = (page - 1) * this.state.pageSize;
-        // const endIndex = startIndex + this.state.pageSize;
-        // const pageArticles = allArticles.slice(startIndex, endIndex);
-        // const totalPages = Math.ceil(allArticles.length / this.state.pageSize);
-        //
-        // setTimeout(() => {
-        //     // 缓存数据
-        //     this.dataCache.lastLoadedData['articles'] = pageArticles;
-        //
-        //     this.renderArticlesData(pageArticles);
-        //     this.renderPagination('articles', totalPages, page);
-        //     this.hideLoading();
-        // }, CONSTANTS.DELAYS.LOADING);
     }
 
     // 智能渲染文章数据
@@ -1116,7 +1032,11 @@ class MemberCenter {
         articles.forEach(article => {
             const row = `
                 <tr>
-                    <td class="cell-title">${article.title}</td>
+                    <td class="cell-title">
+                        <a href="/article/read/${article.id}.html" title="${article.title}" target="_blank">
+                            ${article.title}
+                        </a>
+                    </td>
                     <td class="cell-long-text">${article.introduction}</td>
                     <td>${article.tags.map(tag => `<span class="photo-tag">${tag}</span>`).join('')}</td>
                     <td class="cell-status">${article.viewCount}</td>
@@ -1639,23 +1559,39 @@ class MemberCenter {
     }
 
     // 显示文章模态框
-    showArticleModal(articleId = null) {
-        const isEdit = articleId !== null;
+    async showArticleModal(article = null) {
+        const isEdit = article !== null;
         $('#modalTitle').text(isEdit ? '编辑文章' : '发布文章');
         $('#confirmPublish').text(isEdit ? '保存修改' : '发布文章');
 
+        let tags = [];
+        try {
+            const response = await fetch('/Article/Tags');
+            const result = await response.json();
+            if (!result.success) {
+                this.showMessage(result.msg, 'error');
+            }
+            tags = result.data ?? [];
+        } catch (e) {
+            this.showMessage('获取标签列表失败:' + e, 'error')
+        }
+
+        const tagsHtml = tags
+            .map(tag => `<option value="${tag}" ${(article?.tags.includes(tag) === true ? 'selected' : '')}>${tag}</option>`)
+            .join('');
+
         const modalBody = `
             ${this.generateRecordingSection()}
+            <input type="hidden" value="${article?.id ?? ""}" id="articleId"/>
+            <input type="hidden" value="/Article/Upload" id="articleUploadAddress"/>
             <div class="form-group">
                 <label>标题 <span class="required">*</span></label>
-                <input type="text" class="form-control" id="articleTitle" placeholder="请输入文章标题" value="${isEdit ? '示例标题' : ''}">
+                <input type="text" class="form-control" id="articleTitle" placeholder="请输入文章标题" value="${article?.title ?? ""}">
             </div>
             <div class="form-group">
                 <label>选择标签</label>
                 <select class="form-control" id="articleTags" multiple>
-                    <option value="技术">技术</option>
-                    <option value="编程">编程</option>
-                    <option value="生活">生活</option>
+                    ${tagsHtml}
                 </select>
             </div>
             <div class="form-group">
@@ -1664,11 +1600,11 @@ class MemberCenter {
             </div>
             <div class="form-group">
                 <label>文章简介 <span class="required">*</span></label>
-                <textarea class="form-control" id="articleIntroduction" rows="3" placeholder="请输入文章简介">${isEdit ? '示例简介' : ''}</textarea>
+                <textarea class="form-control" id="articleIntroduction" rows="3" placeholder="请输入文章简介">${article?.introduction ?? ""}</textarea>
             </div>
             <div class="form-group">
                 <label>文章内容 <span class="required">*</span></label>
-                <textarea class="form-control" id="articleContent" rows="10" placeholder="请输入文章内容">${isEdit ? '示例内容' : ''}</textarea>
+                <div class="form-control" style="height: 500px" id="articleContent"></div>
             </div>
         `;
 
@@ -1677,6 +1613,68 @@ class MemberCenter {
 
         // 绑定录音相关事件
         this.bindRecordingEvents();
+
+        this.initMarkdownEditor(article?.markdown ?? "", 'articleContent', 'articleUploadAddress');
+    }
+
+    /**
+     *
+     * 初始化markdown编辑器
+     * @param markdown 内容
+     * @param editorId 编辑器id
+     * @param uploadAddressElementId 上传地址元素id
+     *
+     * */
+    initMarkdownEditor(markdown, editorId, uploadAddressElementId) {
+        let that = this;
+        this.cherryInstance = new Cherry({
+            id: editorId,
+            value: markdown,
+            height: "100%",
+            defaultModel: "editOnly",
+            // 目前应用的主题
+            themeSettings: {
+                mainTheme: this.state.currentTheme,
+                // 目前应用的代码块主题
+                codeBlockTheme: 'one-dark',
+            },
+            engine: {
+                syntax: {
+                    codeBlock: {
+                        editCode: false,
+                        changeLang: false,
+                    },
+                }
+            },
+            toolbars: {
+                // 配置切换主题的按钮到顶部工具栏里
+                toolbar: ['bold', 'italic', 'size', '|', 'color', 'header', 'togglePreview', '|', 'theme',
+                    {insert: ['image', 'link', 'hr', 'br', 'code', 'table']}
+                ],
+                // 配置切换主题的按钮到侧边栏里
+                // sidebar: ['mobilePreview', 'copy', 'theme'],
+            },
+            fileUpload: async function (file, callback) {
+                await that.fileUpload(file, callback, uploadAddressElementId);
+            }
+        });
+    }
+
+    async fileUpload(file, callback, elementId) {
+        const formData = new FormData();
+        formData.append("image", file);
+        const postAction = document.getElementById(elementId).value;
+        let identity = JSON.parse(localStorage.getItem("Identity"));
+        let response = await fetch(postAction, {
+            method: "post",
+            body: formData,
+            headers: {Authorization: `Bearer ${identity["Token"]}`}
+        });
+        let result = await response.json();
+
+
+        callback(result["url"]);
+
     }
 
     // 显示碎碎念模态框
@@ -2447,8 +2445,21 @@ class MemberCenter {
     }
 
     // 编辑功能
-    editArticle(id) {
-        this.showArticleModal(id);
+    async editArticle(id) {
+        this.showLoading();
+        try {
+            const response = await fetch(`/Article/Detail/${id}`);
+            const result = await response.json();
+            if (!result.success) {
+                this.showMessage(result.msg, 'error');
+                return;
+            }
+            await this.showArticleModal(result.data);
+        } catch (e) {
+            this.showMessage(e.message, 'error');
+        }
+        this.hideLoading();
+
     }
 
     editMumble(id) {
@@ -2519,23 +2530,49 @@ class MemberCenter {
     }
 
     // 发布文章
-    publishArticle() {
+    async publishArticle() {
+        const id = $("#articleId").val();
         const title = $('#articleTitle').val();
         const introduction = $('#articleIntroduction').val();
         const content = $('#articleContent').val();
+        const newTgs = $("#articleExtraTags").val();
 
         if (!title || !introduction || !content) {
             this.showMessage('请填写必填字段', 'warning');
             return;
         }
 
+        // const isEdit = !(id == null || id.trim() === "");
         this.showLoading();
-        setTimeout(async () => {
-            this.hideLoading();
-            this.hideModal();
-            this.showMessage('文章发布成功', 'success');
-            await this.loadArticles();
-        }, CONSTANTS.DELAYS.LOADING);
+
+        try {
+
+            const response = await fetch('/Article/Publish', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    id,
+                    title,
+                    introduction,
+                    content,
+                    newTgs
+                })
+            });
+            const result = await response.json();
+        } catch (e) {
+            this.showMessage('文章保存失败：' + e);
+        }
+        this.hideModal();
+
+
+        // setTimeout(async () => {
+        //     this.hideLoading();
+        //     this.hideModal();
+        //     this.showMessage('文章发布成功', 'success');
+        //     await this.loadArticles();
+        // }, CONSTANTS.DELAYS.LOADING);
     }
 
     // 发布碎碎念
@@ -2600,6 +2637,7 @@ class MemberCenter {
     hideModal() {
         $(CONSTANTS.SELECTORS.publishModal).hide();
         $(CONSTANTS.SELECTORS.modalBody).empty();
+        this.cherryInstance = null;
     }
 
     /**
