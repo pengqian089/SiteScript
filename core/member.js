@@ -296,7 +296,7 @@ class MemberCenter {
 
         // 相册相关
         $('#uploadPhoto').on('click', () => this.showPhotoModal());
-        $('#searchPhotos').on('click', () => this.searchPhotos());
+        $('#searchPhotos').on('click', async () => await this.searchPhotos());
     }
 
     /**
@@ -977,7 +977,7 @@ class MemberCenter {
                 this.loadTimeline();
                 break;
             case CONSTANTS.PAGES.PHOTOS:
-                this.loadPhotos();
+                await this.loadPhotos();
                 break;
         }
     }
@@ -1178,7 +1178,7 @@ class MemberCenter {
                 this.loadTimeline(page);
                 break;
             case CONSTANTS.PAGES.PHOTOS:
-                this.loadPhotos(page);
+                await this.loadPhotos(page);
                 break;
         }
     }
@@ -1417,7 +1417,7 @@ class MemberCenter {
     }
 
     // 加载照片列表
-    loadPhotos(page = null) {
+    async loadPhotos(page = null) {
         this.showLoading();
         // 如果没有传入页码，使用当前页码
         if (page !== null) {
@@ -1425,92 +1425,48 @@ class MemberCenter {
         }
         page = this.state.currentPageNum;
 
-        // 模拟数据 - 生成40张照片
-        const allPhotos = [];
-        const titles = [
-            '美丽的风景', '城市夜景', '自然风光', '建筑艺术',
-            '人物肖像', '美食摄影', '旅行记录', '生活瞬间',
-            '工作环境', '学习时光', '运动健身', '休闲娱乐',
-            '节日庆祝', '家庭聚会', '朋友聚会', '户外活动',
-            '室内设计', '艺术创作', '技术展示', '产品展示',
-            '活动记录', '会议现场', '培训现场', '展览现场',
-            '演出表演', '比赛现场', '颁奖典礼', '毕业典礼',
-            '婚礼现场', '生日派对', '纪念日', '特殊时刻',
-            '日常记录', '工作成果', '学习成果', '创作成果',
-            '旅行足迹', '生活点滴', '美好回忆', '精彩瞬间',
+        const tag = $("#photoTagSearch").val();
+        const description = $("#photoDescSearch").val();
+
+        const parameters = [
+            {name: "pageIndex", value: page},
+            {name: "pageSize", value: 12},
+            {name: "tag", value: tag},
+            {name: "description", value: description}
         ];
 
-        const descriptions = [
-            '这是一张美丽的风景照片，展现了自然的魅力',
-            '城市夜景灯火辉煌，展现了都市的繁华',
-            '自然风光让人心旷神怡，感受大自然的美好',
-            '建筑艺术展现了人类的智慧和创造力',
-            '人物肖像记录了珍贵的瞬间',
-            '美食摄影让人垂涎欲滴',
-            '旅行记录留下了美好的回忆',
-            '生活瞬间记录了日常的点点滴滴',
-            '工作环境展现了专业的工作氛围',
-            '学习时光记录了知识的积累过程',
-            '运动健身展现了健康的生活方式',
-            '休闲娱乐让人放松心情',
-            '节日庆祝充满了欢乐的气氛',
-            '家庭聚会温馨和睦',
-            '朋友聚会热闹非凡',
-            '户外活动让人亲近自然',
-            '室内设计展现了空间的魅力',
-            '艺术创作充满了创意和灵感',
-            '技术展示展现了科技的力量',
-            '产品展示突出了产品的特点',
-            '活动记录留下了难忘的回忆',
-            '会议现场展现了专业的氛围',
-            '培训现场充满了学习的热情',
-            '展览现场展现了丰富的文化内涵',
-            '演出表演精彩纷呈',
-            '比赛现场紧张刺激',
-            '颁奖典礼庄重隆重',
-            '毕业典礼充满了感动',
-            '婚礼现场浪漫温馨',
-            '生日派对欢乐热闹',
-            '纪念日意义非凡',
-            '特殊时刻值得珍藏',
-            '日常记录真实自然',
-            '工作成果令人自豪',
-            '学习成果让人欣慰',
-            '创作成果充满成就感',
-            '旅行足迹遍布各地',
-            '生活点滴温馨美好',
-            '美好回忆永远珍藏',
-            '精彩瞬间值得回味',
-        ];
-
-        const tags = ['风景', '自然', '人物', '建筑', '城市', '生活', '美食', '旅行'];
-        const images = ['../core/images/laola.png', '../core/images/default-avatar.png'];
-
-        for (let i = 1; i <= 40; i++) {
-            allPhotos.push({
-                id: i.toString(),
-                title: titles[i - 1] || `照片${i}`,
-                description: descriptions[i - 1] || `这是第${i}张照片的描述`,
-                tags: [tags[Math.floor(Math.random() * tags.length)]],
-                uploadTime: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toLocaleString(),
-                accessUrl: images[Math.floor(Math.random() * images.length)]
-            });
+        const queryString = this.buildFetchQueryString(parameters);
+        let uri = `/my/photos${queryString}`;
+        try {
+            const response = await fetch(uri);
+            const result = await response.json();
+            if (!result.success) {
+                this.hideLoading();
+                this.showMessage(result.msg, "error");
+                return;
+            }
+            this.dataCache.lastLoadedData['photos'] = result.data.list;
+            this.renderPhotosData(result.data.list);
+            this.renderPagination('photos', result.data.totalPages, page);
+        } catch (e) {
+            this.showMessage(e.message, "error");
         }
+        this.hideLoading();
+    }
 
-        // 分页处理
-        const startIndex = (page - 1) * this.state.pageSize;
-        const endIndex = startIndex + this.state.pageSize;
-        const pagePhotos = allPhotos.slice(startIndex, endIndex);
-        const totalPages = Math.ceil(allPhotos.length / this.state.pageSize);
-
-        setTimeout(() => {
-            // 缓存数据
-            this.dataCache.lastLoadedData['photos'] = pagePhotos;
-
-            this.renderPhotosData(pagePhotos);
-            this.renderPagination('photos', totalPages, page);
-            this.hideLoading();
-        }, CONSTANTS.DELAYS.LOADING);
+    /**
+     *
+     * 构建查询字符串
+     * @param {Array} parameters 参数列表
+     * @returns {String} 查询字符串
+     *
+     * */
+    buildFetchQueryString(parameters) {
+        let parametersValue = [];
+        for (const item of parameters) {
+            parametersValue.push(`${item.name}=${encodeURIComponent(item.value)}`)
+        }
+        return (parametersValue.length === 0 ? "" : "?" + parametersValue.join("&"));
     }
 
     // 智能渲染相册数据
@@ -1536,10 +1492,10 @@ class MemberCenter {
         photos.forEach(photo => {
             const card = `
                 <div class="photo-card">
-                    <img src="${photo.accessUrl}" alt="${photo.title}" class="photo-image">
+                    <img src="${photo.accessUrl}!albums" alt="${photo.description}" class="photo-image">
                     <div class="photo-info">
-                        <div class="photo-title">${photo.title}</div>
-                        <div class="photo-meta">${photo.uploadTime}</div>
+                        <div class="photo-title">${photo.description ?? ""}</div>
+                        <div class="photo-meta">${new Date(photo.uploadTime).toLocaleString()}</div>
                         <div class="photo-tags">
                             ${photo.tags.map(tag => `<span class="photo-tag">${tag}</span>`).join('')}
                         </div>
@@ -1664,17 +1620,12 @@ class MemberCenter {
         const formData = new FormData();
         formData.append("image", file);
         const postAction = document.getElementById(elementId).value;
-        let identity = JSON.parse(localStorage.getItem("Identity"));
         let response = await fetch(postAction, {
             method: "post",
-            body: formData,
-            headers: {Authorization: `Bearer ${identity["Token"]}`}
+            body: formData
         });
         let result = await response.json();
-
-
         callback(result["url"]);
-
     }
 
     // 显示碎碎念模态框
@@ -1988,6 +1939,18 @@ class MemberCenter {
      */
     processRecordedAudio() {
         try {
+            // 计算实际录音时长（基于开始时间）
+            const actualDuration = this.recordingState.startTime
+                ? (Date.now() - this.recordingState.startTime) / 1000
+                : 0;
+
+            // 检查录音时长（使用计算的实际时长）
+            if (actualDuration < CONSTANTS.RECORDING.MIN_DURATION) {
+                this.showMessage(`录音时长太短，至少需要${CONSTANTS.RECORDING.MIN_DURATION}秒`, 'warning');
+                this.clearRecording();
+                return;
+            }
+
             // 创建音频Blob
             const mimeType = this.media.mediaRecorder.mimeType;
             this.media.audioBlob = new Blob(this.media.audioChunks, {type: mimeType});
@@ -1997,18 +1960,19 @@ class MemberCenter {
             this.media.audioElement = new Audio(this.media.audioUrl);
 
             this.media.audioElement.onloadedmetadata = () => {
-                this.recordingState.duration = this.media.audioElement.duration;
+                // 使用音频文件的实际时长，如果获取失败则使用计算的时长
+                this.recordingState.duration = this.media.audioElement.duration || actualDuration;
                 this.recordingState.hasRecording = true;
                 this.updateRecordingUI();
             };
 
-            // 检查录音时长
-            const recordingDuration = this.recordingState.duration;
-            if (recordingDuration < CONSTANTS.RECORDING.MIN_DURATION) {
-                this.showMessage(`录音时长太短，至少需要${CONSTANTS.RECORDING.MIN_DURATION}秒`, 'warning');
-                this.clearRecording();
-                return;
-            }
+            // 处理音频加载错误
+            this.media.audioElement.onerror = () => {
+                console.warn('音频文件加载失败，使用计算的时长');
+                this.recordingState.duration = actualDuration;
+                this.recordingState.hasRecording = true;
+                this.updateRecordingUI();
+            };
 
             this.showMessage('录音完成', 'success');
 
@@ -2508,10 +2472,8 @@ class MemberCenter {
         this.showMessage(`搜索时间轴：关键词="${keyword}"`, 'info');
     }
 
-    searchPhotos() {
-        const tags = $('#photoTagSearch').val();
-        const desc = $('#photoDescSearch').val();
-        this.showMessage(`搜索照片：标签="${tags}"，描述="${desc}"`, 'info');
+    async searchPhotos() {        
+        await this.loadPhotos(CONSTANTS.PAGINATION.DEFAULT_PAGE_NUM);
     }
 
     // 确认发布
@@ -2618,11 +2580,11 @@ class MemberCenter {
         const description = $('#photoDescription').val();
 
         this.showLoading();
-        setTimeout(() => {
+        setTimeout(async () => {
             this.hideLoading();
             this.hideModal();
             this.showMessage('照片上传成功', 'success');
-            this.loadPhotos();
+            await this.loadPhotos();
         }, CONSTANTS.DELAYS.LOADING);
     }
 
@@ -3089,10 +3051,10 @@ class MemberCenter {
         photos.forEach(photo => {
             const card = `
                 <div class="mobile-photo-card">
-                    <img src="${photo.accessUrl}" alt="${photo.title}" class="mobile-photo-image">
+                    <img src="${photo.accessUrl}!albums" alt="${photo.description}" class="mobile-photo-image">
                     <div class="mobile-photo-info">
-                        <div class="mobile-photo-title">${photo.title}</div>
-                        <div class="mobile-photo-meta">${photo.uploadTime}</div>
+                        <div class="mobile-photo-title">${photo.description}</div>
+                        <div class="mobile-photo-meta">${new Date(photo.uploadTime).toLocaleString()}</div>
                         <div class="mobile-photo-tags">
                             ${photo.tags.map(tag => `<span class="photo-tag">${tag}</span>`).join('')}
                         </div>
