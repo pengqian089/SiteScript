@@ -284,15 +284,15 @@ class MemberCenter {
     bindContentEvents() {
         // 文章相关
         $('#newArticle').on('click', () => this.showArticleModal());
-        $('#searchArticles').on('click', () => this.searchArticles());
+        $('#searchArticles').on('click', async () => await this.searchArticles());
 
         // 碎碎念相关
         $('#newMumble').on('click', () => this.showMumbleModal());
-        $('#searchMumbles').on('click', () => this.searchMumbles());
+        $('#searchMumbles').on('click', async () => await this.searchMumbles());
 
         // 时间轴相关
         $('#newTimeline').on('click', () => this.showTimelineModal());
-        $('#searchTimeline').on('click', () => this.searchTimeline());
+        $('#searchTimeline').on('click', async () => await this.searchTimeline());
 
         // 相册相关
         $('#uploadPhoto').on('click', () => this.showPhotoModal());
@@ -971,10 +971,10 @@ class MemberCenter {
                 await this.loadArticles();
                 break;
             case CONSTANTS.PAGES.MUMBLES:
-                this.loadMumbles();
+                await this.loadMumbles();
                 break;
             case CONSTANTS.PAGES.TIMELINE:
-                this.loadTimeline();
+                await this.loadTimeline();
                 break;
             case CONSTANTS.PAGES.PHOTOS:
                 await this.loadPhotos();
@@ -1172,10 +1172,10 @@ class MemberCenter {
                 await this.loadArticles(page);
                 break;
             case CONSTANTS.PAGES.MUMBLES:
-                this.loadMumbles(page);
+                await this.loadMumbles(page);
                 break;
             case CONSTANTS.PAGES.TIMELINE:
-                this.loadTimeline(page);
+                await this.loadTimeline(page);
                 break;
             case CONSTANTS.PAGES.PHOTOS:
                 await this.loadPhotos(page);
@@ -1184,7 +1184,7 @@ class MemberCenter {
     }
 
     // 加载碎碎念列表
-    loadMumbles(page = null) {
+    async loadMumbles(page = null) {
         this.showLoading();
         // 如果没有传入页码，使用当前页码
         if (page !== null) {
@@ -1192,65 +1192,28 @@ class MemberCenter {
         }
         page = this.state.currentPageNum;
 
-        // 模拟数据 - 生成30条碎碎念
-        const allMumbles = [];
-        const contents = [
-            '今天天气真好，适合出去走走',
-            '刚写完一篇技术文章，感觉很有成就感',
-            '学习新技术总是让人兴奋',
-            '代码调试了一整天，终于解决了问题',
-            '和同事讨论技术方案，收获很多',
-            '周末计划学习一个新的框架',
-            '项目上线了，心情很激动',
-            '遇到一个有趣的bug，记录一下',
-            '技术分享会准备中，有点紧张',
-            '重构代码后性能提升了很多',
-            '新买的键盘手感不错',
-            '今天加班到很晚，但很有收获',
-            '和产品经理讨论需求，沟通很重要',
-            '代码review发现了一些问题',
-            '学习设计模式，感觉豁然开朗',
-            '团队协作真的很重要',
-            '技术选型需要考虑很多因素',
-            '性能优化是一个持续的过程',
-            '用户体验设计需要用心思考',
-            '技术文档的编写也很重要',
-            '自动化测试节省了很多时间',
-            '持续集成让开发更高效',
-            '代码规范很重要',
-            '技术债务要及时处理',
-            '学习新技术要保持好奇心',
-            '技术分享是很好的学习方式',
-            '开源项目贡献很有意义',
-            '技术社区交流收获很多',
-            '保持学习的心态很重要',
-            '技术之路永无止境',
+        const parameters = [
+            {name: "pageIndex", value: page},
+            {name: "pageSize", value: this.state.pageSize},
+            {name: "content", value: $("#mumbleContentSearch").val()}
         ];
-
-        for (let i = 1; i <= 30; i++) {
-            allMumbles.push({
-                id: i.toString(),
-                content: contents[i - 1] || `这是第${i}条示例碎碎念内容...`,
-                like: Math.floor(Math.random() * 100) + 5,
-                commentCount: Math.floor(Math.random() * 20) + 1,
-                createTime: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toLocaleString()
-            });
-        }
-
-        // 分页处理
-        const startIndex = (page - 1) * this.state.pageSize;
-        const endIndex = startIndex + this.state.pageSize;
-        const pageMumbles = allMumbles.slice(startIndex, endIndex);
-        const totalPages = Math.ceil(allMumbles.length / this.state.pageSize);
-
-        setTimeout(() => {
-            // 缓存数据
+        const queryString = this.buildFetchQueryString(parameters);
+        try {
+            const response = await fetch(`/Talk/MyTalk${queryString}`);
+            const result = await response.json();
+            if (!result.success) {
+                this.showMessage(result.msg, 'error');
+                this.hideLoading();
+                return;
+            }
+            const pageMumbles = result.data.list;
             this.dataCache.lastLoadedData['mumbles'] = pageMumbles;
-
             this.renderMumblesData(pageMumbles);
-            this.renderPagination('mumbles', totalPages, page);
+            this.renderPagination('mumbles', result.data.totalPages, page);
             this.hideLoading();
-        }, CONSTANTS.DELAYS.LOADING);
+        } catch (e) {
+            this.showMessage("获取碎碎念失败：" + e.message);
+        }
     }
 
     // 智能渲染碎碎念数据
@@ -1276,7 +1239,7 @@ class MemberCenter {
         mumbles.forEach(mumble => {
             const row = `
                 <tr>
-                    <td class="cell-long-text">${mumble.content}</td>
+                    <td class="cell-long-text">${mumble.markdown}</td>
                     <td class="cell-status">${mumble.like}</td>
                     <td class="cell-status">${mumble.commentCount}</td>
                     <td>${mumble.createTime}</td>
@@ -1297,7 +1260,7 @@ class MemberCenter {
     }
 
     // 加载时间轴列表
-    loadTimeline(page = null) {
+    async loadTimeline(page = null) {
         this.showLoading();
         // 如果没有传入页码，使用当前页码
         if (page !== null) {
@@ -1305,71 +1268,28 @@ class MemberCenter {
         }
         page = this.state.currentPageNum;
 
-        // 模拟数据 - 生成25条时间轴
-        const allTimeline = [];
-        const titles = [
-            '项目启动', '第一个里程碑', '技术选型完成', '架构设计确定',
-            '开发环境搭建', '第一个功能完成', '代码审查开始', '测试用例编写',
-            '集成测试', '性能测试', '安全测试', '用户验收测试',
-            '部署准备', '生产环境部署', '监控系统上线', '用户培训',
-            '正式上线', '用户反馈收集', '问题修复', '功能优化',
-            '版本迭代', '新功能开发', '技术分享', '团队建设',
-            '项目总结',
+        const parameters = [
+            {name: 'pageIndex', value: page},
+            {name: 'pageSize', value: this.state.pageSize},
+            {name: 'content', value: $("#timelineSearch").val()}
         ];
-
-        const contents = [
-            '项目正式启动，团队组建完成',
-            '完成第一个重要里程碑',
-            '技术栈选型确定，开始技术调研',
-            '系统架构设计完成，开始详细设计',
-            '开发环境搭建完成，开始编码',
-            '核心功能开发完成',
-            '代码审查流程建立',
-            '自动化测试用例编写完成',
-            '系统集成测试开始',
-            '性能测试完成，系统性能达标',
-            '安全测试通过，无重大安全漏洞',
-            '用户验收测试完成',
-            '生产环境部署准备就绪',
-            '系统成功部署到生产环境',
-            '监控和告警系统上线',
-            '用户培训完成',
-            '系统正式对外提供服务',
-            '收集用户反馈，整理需求',
-            '修复发现的问题',
-            '根据反馈优化系统功能',
-            '开始下一个版本开发',
-            '新功能开发完成',
-            '技术分享会举办',
-            '团队建设活动',
-            '项目总结会议',
-        ];
-
-        for (let i = 1; i <= 25; i++) {
-            allTimeline.push({
-                id: i.toString(),
-                title: titles[i - 1] || `时间轴${i}`,
-                content: contents[i - 1] || `这是第${i}条时间轴的内容...`,
-                date: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                more: Math.random() > 0.5 ? `https://example.com/timeline/${i}` : null,
-                createTime: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toLocaleString()
-            });
-        }
-
-        // 分页处理
-        const startIndex = (page - 1) * this.state.pageSize;
-        const endIndex = startIndex + this.state.pageSize;
-        const pageTimeline = allTimeline.slice(startIndex, endIndex);
-        const totalPages = Math.ceil(allTimeline.length / this.state.pageSize);
-
-        setTimeout(() => {
-            // 缓存数据
+        const queryString = this.buildFetchQueryString(parameters);
+        try {
+            const response = await fetch(`/Timeline/MyTimeline${queryString}`);
+            const result = await response.json();
+            if (!result.success) {
+                this.showMessage(result.msg, 'error')
+                this.hideLoading();
+                return;
+            }
+            const pageTimeline = result.data.list;
             this.dataCache.lastLoadedData['timeline'] = pageTimeline;
-
             this.renderTimelineData(pageTimeline);
-            this.renderPagination('timeline', totalPages, page);
-            this.hideLoading();
-        }, CONSTANTS.DELAYS.LOADING);
+            this.renderPagination('timeline', result.data.totalPages, page);
+        } catch (e) {
+            this.showMessage("获取时间轴数据失败：" + e.message, 'error');
+        }
+        this.hideLoading();
     }
 
     // 智能渲染时间轴数据
@@ -1397,9 +1317,9 @@ class MemberCenter {
                 <tr>
                     <td class="cell-title">${item.title}</td>
                     <td class="cell-long-text">${item.content}</td>
-                    <td>${item.date}</td>
+                    <td>${new Date(item.date).toLocaleString()}</td>
                     <td>${item.more ? `<a href="${item.more}" target="_blank">链接</a>` : '-'}</td>
-                    <td>${item.createTime}</td>
+                    <td>${new Date(item.createTime).toLocaleString()}</td>
                     <td class="cell-actions">
                         <div class="table-actions">
                             <button class="btn btn-sm btn-primary" onclick="memberCenter.editTimeline('${item.id}')">
@@ -2462,17 +2382,15 @@ class MemberCenter {
         await this.loadArticles(CONSTANTS.PAGINATION.DEFAULT_PAGE_NUM);
     }
 
-    searchMumbles() {
-        const content = $('#mumbleContentSearch').val();
-        this.showMessage(`搜索碎碎念：内容="${content}"`, 'info');
+    async searchMumbles() {
+        await this.loadMumbles(CONSTANTS.PAGINATION.DEFAULT_PAGE_NUM);
     }
 
-    searchTimeline() {
-        const keyword = $('#timelineSearch').val();
-        this.showMessage(`搜索时间轴：关键词="${keyword}"`, 'info');
+    async searchTimeline() {
+        await this.loadTimeline(CONSTANTS.PAGINATION.DEFAULT_PAGE_NUM);
     }
 
-    async searchPhotos() {        
+    async searchPhotos() {
         await this.loadPhotos(CONSTANTS.PAGINATION.DEFAULT_PAGE_NUM);
     }
 
@@ -2547,11 +2465,11 @@ class MemberCenter {
         }
 
         this.showLoading();
-        setTimeout(() => {
+        setTimeout(async () => {
             this.hideLoading();
             this.hideModal();
             this.showMessage('碎碎念发布成功', 'success');
-            this.loadMumbles();
+            await this.loadMumbles();
         }, CONSTANTS.DELAYS.LOADING);
     }
 
@@ -2567,11 +2485,11 @@ class MemberCenter {
         }
 
         this.showLoading();
-        setTimeout(() => {
+        setTimeout(async () => {
             this.hideLoading();
             this.hideModal();
             this.showMessage('时间轴发布成功', 'success');
-            this.loadTimeline();
+            await this.loadTimeline();
         }, CONSTANTS.DELAYS.LOADING);
     }
 
@@ -2965,7 +2883,7 @@ class MemberCenter {
                 <div class="mobile-card">
                     <div class="mobile-card-row">
                         <div class="mobile-card-label">内容</div>
-                        <div class="mobile-card-content">${mumble.content}</div>
+                        <div class="mobile-card-content">${mumble.markdown}</div>
                     </div>
                     <div class="mobile-card-row">
                         <div class="mobile-card-label">点赞数</div>
@@ -3014,7 +2932,7 @@ class MemberCenter {
                     </div>
                     <div class="mobile-card-row">
                         <div class="mobile-card-label">时间轴日期</div>
-                        <div class="mobile-card-content">${item.date}</div>
+                        <div class="mobile-card-content">${new Date(item.date).toLocaleString()}</div>
                     </div>
                     <div class="mobile-card-row">
                         <div class="mobile-card-label">更多链接</div>
@@ -3024,7 +2942,7 @@ class MemberCenter {
                     </div>
                     <div class="mobile-card-row">
                         <div class="mobile-card-label">发布时间</div>
-                        <div class="mobile-card-content">${item.createTime}</div>
+                        <div class="mobile-card-content">${new Date(item.createTime).toLocaleString()}</div>
                     </div>
                     <div class="mobile-card-row">
                         <div class="mobile-card-label">操作</div>
