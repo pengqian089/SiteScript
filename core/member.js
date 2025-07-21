@@ -180,6 +180,15 @@ class MemberCenter {
         this.initialize();
 
         this.cherryInstance = null;
+
+        this.converter = new showdown.Converter({
+            openLinksInNewWindow: true,
+            simplifiedAutoLink: true,
+            splitAdjacentBlockquotes: true,
+            strikethrough: true,
+            tables: true,
+            tasklists: true,
+        });
     }
 
     /**
@@ -306,7 +315,7 @@ class MemberCenter {
         // 发布模态框
         $('#closeModal').on('click', () => this.hideModal());
         $('#cancelPublish').on('click', () => this.hideModal());
-        $(CONSTANTS.SELECTORS.confirmPublish).on('click', () => this.confirmPublish());
+        $(CONSTANTS.SELECTORS.confirmPublish).on('click', async () => await this.confirmPublish());
 
         // 删除确认模态框
         $('#closeDeleteModal').on('click', () => this.hideDeleteModal());
@@ -1041,7 +1050,7 @@ class MemberCenter {
                     <td>${article.tags.map(tag => `<span class="photo-tag">${tag}</span>`).join('')}</td>
                     <td class="cell-status">${article.viewCount}</td>
                     <td class="cell-status">${article.commentCount}</td>
-                    <td>${article.createTime}</td>
+                    <td>${this.formatDefaultDateTime(article.createTime)}</td>
                     <td class="cell-actions">
                         <div class="table-actions">
                             <button class="btn btn-sm btn-primary" onclick="memberCenter.editArticle('${article.id}')">
@@ -1193,9 +1202,9 @@ class MemberCenter {
         page = this.state.currentPageNum;
 
         const parameters = [
-            {name: "pageIndex", value: page},
-            {name: "pageSize", value: this.state.pageSize},
-            {name: "content", value: $("#mumbleContentSearch").val()}
+            { name: "pageIndex", value: page },
+            { name: "pageSize", value: this.state.pageSize },
+            { name: "content", value: $("#mumbleContentSearch").val() }
         ];
         const queryString = this.buildFetchQueryString(parameters);
         try {
@@ -1239,10 +1248,12 @@ class MemberCenter {
         mumbles.forEach(mumble => {
             const row = `
                 <tr>
-                    <td class="cell-long-text">${mumble.markdown}</td>
+                    <td class="cell-long-text">
+                        <pre>${mumble.markdown}</pre>
+                    </td>
                     <td class="cell-status">${mumble.like}</td>
                     <td class="cell-status">${mumble.commentCount}</td>
-                    <td>${mumble.createTime}</td>
+                    <td>${this.formatDefaultDateTime(mumble.createTime)}</td>
                     <td class="cell-actions">
                         <div class="table-actions">
                             <button class="btn btn-sm btn-primary" onclick="memberCenter.editMumble('${mumble.id}')">
@@ -1269,9 +1280,9 @@ class MemberCenter {
         page = this.state.currentPageNum;
 
         const parameters = [
-            {name: 'pageIndex', value: page},
-            {name: 'pageSize', value: this.state.pageSize},
-            {name: 'content', value: $("#timelineSearch").val()}
+            { name: 'pageIndex', value: page },
+            { name: 'pageSize', value: this.state.pageSize },
+            { name: 'content', value: $("#timelineSearch").val() }
         ];
         const queryString = this.buildFetchQueryString(parameters);
         try {
@@ -1349,10 +1360,10 @@ class MemberCenter {
         const description = $("#photoDescSearch").val();
 
         const parameters = [
-            {name: "pageIndex", value: page},
-            {name: "pageSize", value: 12},
-            {name: "tag", value: tag},
-            {name: "description", value: description}
+            { name: "pageIndex", value: page },
+            { name: "pageSize", value: 12 },
+            { name: "tag", value: tag },
+            { name: "description", value: description }
         ];
 
         const queryString = this.buildFetchQueryString(parameters);
@@ -1525,7 +1536,7 @@ class MemberCenter {
             toolbars: {
                 // 配置切换主题的按钮到顶部工具栏里
                 toolbar: ['bold', 'italic', 'size', '|', 'color', 'header', 'togglePreview', '|', 'theme',
-                    {insert: ['image', 'link', 'hr', 'br', 'code', 'table']}
+                    { insert: ['image', 'link', 'hr', 'br', 'code', 'table'] }
                 ],
                 // 配置切换主题的按钮到侧边栏里
                 // sidebar: ['mobilePreview', 'copy', 'theme'],
@@ -1534,6 +1545,8 @@ class MemberCenter {
                 await that.fileUpload(file, callback, uploadAddressElementId);
             }
         });
+
+        this.cherryInstance.switchModel('editOnly');
     }
 
     async fileUpload(file, callback, elementId) {
@@ -1549,24 +1562,44 @@ class MemberCenter {
     }
 
     // 显示碎碎念模态框
-    showMumbleModal(mumbleId = null) {
+    async showMumbleModal(mumbleId = null) {
         const isEdit = mumbleId !== null;
         $('#modalTitle').text(isEdit ? '编辑碎碎念' : '发布碎碎念');
         $('#confirmPublish').text(isEdit ? '保存修改' : '发布碎碎念');
 
-        const modalBody = `
-            ${this.generateRecordingSection()}
-            <div class="form-group">
-                <label>内容 <span class="required">*</span></label>
-                <textarea class="form-control" id="mumbleContent" rows="6" placeholder="请输入碎碎念内容">${isEdit ? '示例内容' : ''}</textarea>
-            </div>
-        `;
+        try {
 
-        $('#modalBody').html(modalBody);
-        $('#publishModal').show();
+            let mumble = null;
+            if (isEdit) {
+                const response = await fetch(`/Talk/Detail/${mumbleId}`);
+                const result = await response.json();
+                if (!result.success) {
+                    this.showMessage(result.msg, 'error');
+                    return;
+                }
+                mumble = result.data;
+            }
 
-        // 绑定录音相关事件
-        this.bindRecordingEvents();
+            const modalBody = `
+                ${this.generateRecordingSection()}
+                <input type="hidden" id="mumbleId" value="${mumbleId ?? ""}" />
+                <input type="hidden" value="/Talk/Upload" id="mumbleUploadAddress"/>
+                <div class="form-group">
+                    <label>内容 <span class="required">*</span></label>
+                    <div class="form-control" id="mumbleContent"></div>
+                </div>
+            `;
+
+            $('#modalBody').html(modalBody);
+            $('#publishModal').show();
+            this.initMarkdownEditor(mumble?.markdown ?? "", "mumbleContent", "mumbleUploadAddress");
+
+            // 绑定录音相关事件
+            this.bindRecordingEvents();
+        } catch (e) {
+            this.showMessage(e.message, 'error');
+        }
+
     }
 
     // 显示时间轴模态框
@@ -1722,7 +1755,7 @@ class MemberCenter {
         $('#playRecording').on('click', () => this.togglePlayback());
         $('#pauseRecording').on('click', () => this.pausePlayback());
         $('#clearRecording').on('click', () => this.clearRecording());
-        $('#uploadRecording').on('click', () => this.uploadRecording());
+        $('#uploadRecording').on('click', async () => await this.uploadRecording());
 
         // 绑定进度条事件
         this.bindProgressBarEvents();
@@ -1810,7 +1843,7 @@ class MemberCenter {
                 : CONSTANTS.RECORDING.FALLBACK_TYPE;
 
             // 创建录音器
-            this.media.mediaRecorder = new MediaRecorder(stream, {mimeType});
+            this.media.mediaRecorder = new MediaRecorder(stream, { mimeType });
             this.media.audioChunks = [];
 
             // 设置事件处理器
@@ -1873,7 +1906,7 @@ class MemberCenter {
 
             // 创建音频Blob
             const mimeType = this.media.mediaRecorder.mimeType;
-            this.media.audioBlob = new Blob(this.media.audioChunks, {type: mimeType});
+            this.media.audioBlob = new Blob(this.media.audioChunks, { type: mimeType });
             this.media.audioUrl = URL.createObjectURL(this.media.audioBlob);
 
             // 创建音频元素用于播放和获取时长
@@ -2101,18 +2134,25 @@ class MemberCenter {
 
             // 模拟上传过程
             const formData = new FormData();
-            formData.append('audio', this.media.audioBlob, 'recording.webm');
+            formData.append('record', this.media.audioBlob, 'recording.webm');
             formData.append('duration', this.recordingState.duration);
 
-            // 模拟API调用
-            await this.mockApiCall(() => {
+            const response = await fetch("/Audio/Upload", {
+                method: "POST", body: formData
+            });
+            const result = await response.json();
+            if (!result.success) {
+                this.showMessage(result.msg, 'error');
                 this.hideLoading();
-                this.showMessage('录音上传成功', 'success');
+                return;
+            }
 
-                // 可以在这里处理上传成功后的逻辑
-                // 比如将录音URL添加到表单数据中
+            if (!this.cherryInstance?.insert) {
+                this.cherryInstance.insert(`<audio controls src="${result.data.accessUrl}"></audio>`, true);
+            }
 
-            }, CONSTANTS.DELAYS.UPLOAD);
+            this.hideLoading();
+            this.showMessage('录音上传成功', 'success');
 
         } catch (error) {
             console.error('上传录音失败:', error);
@@ -2144,7 +2184,7 @@ class MemberCenter {
      * 更新录音UI状态
      */
     updateRecordingUI() {
-        const {isRecording, hasRecording, isPlaying, isPaused} = this.recordingState;
+        const { isRecording, hasRecording, isPlaying, isPaused } = this.recordingState;
 
         // 录音控制按钮
         $('#startRecording').toggle(!isRecording && !hasRecording);
@@ -2199,7 +2239,7 @@ class MemberCenter {
      * 更新播放进度
      */
     updatePlaybackProgress() {
-        const {currentTime, duration} = this.recordingState;
+        const { currentTime, duration } = this.recordingState;
 
         if (duration > 0) {
             const progress = (currentTime / duration) * 100;
@@ -2360,7 +2400,7 @@ class MemberCenter {
 
     // 删除项目
     deleteItem(type, id) {
-        this.state.currentDeleteItem = {type, id};
+        this.state.currentDeleteItem = { type, id };
         $('#deleteModal').show();
     }
 
@@ -2395,11 +2435,11 @@ class MemberCenter {
     }
 
     // 确认发布
-    confirmPublish() {
+    async confirmPublish() {
         const modalTitle = $('#modalTitle').text();
 
         if (modalTitle.includes('文章')) {
-            this.publishArticle();
+            await this.publishArticle();
         } else if (modalTitle.includes('碎碎念')) {
             this.publishMumble();
         } else if (modalTitle.includes('时间轴')) {
@@ -2414,45 +2454,61 @@ class MemberCenter {
         const id = $("#articleId").val();
         const title = $('#articleTitle').val();
         const introduction = $('#articleIntroduction').val();
-        const content = $('#articleContent').val();
-        const newTgs = $("#articleExtraTags").val();
+        const newTag = $("#articleExtraTags").val();
+        const tags = $("#articleTags").val();
 
-        if (!title || !introduction || !content) {
-            this.showMessage('请填写必填字段', 'warning');
+        if (this.cherryInstance === null) {
+            this.showMessage('未获取到编辑器实例', 'warning');
             return;
         }
 
-        // const isEdit = !(id == null || id.trim() === "");
+        if (
+            (
+                !tags
+                || tags.length === 0
+                || tags.some(x => x === null
+                    || x.trim() === "")
+            )
+            && (newTag === null || newTag.trim() === "")) {
+            this.showMessage("请选择标签", 'error');
+            return;
+        }
+
+        const markdown = this.cherryInstance.getMarkdown();
+        const content = this.cherryInstance.getHtml();
+
+        if (!title || !introduction || markdown === null || markdown.trim() === "") {
+            this.showMessage('请填写必填字段', 'warning');
+            return;
+        }
         this.showLoading();
 
         try {
-
+            const formData = new FormData();
+            formData.append("id", id);
+            formData.append("title", title);
+            formData.append("tags", tags);
+            formData.append("introduction", introduction);
+            formData.append("markdown", markdown);
+            formData.append("content", content);
+            formData.append("newTag", newTag);
             const response = await fetch('/Article/Publish', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    id,
-                    title,
-                    introduction,
-                    content,
-                    newTgs
-                })
+                body: formData
             });
             const result = await response.json();
+            if (!result.success) {
+                this.showMessage(result.msg, 'error');
+                this.hideLoading();
+                return;
+            }
+            this.hideLoading();
+            this.hideModal();
+            this.showMessage('文章发布成功', 'success');
+            await this.loadArticles();
         } catch (e) {
             this.showMessage('文章保存失败：' + e);
         }
-        this.hideModal();
-
-
-        // setTimeout(async () => {
-        //     this.hideLoading();
-        //     this.hideModal();
-        //     this.showMessage('文章发布成功', 'success');
-        //     await this.loadArticles();
-        // }, CONSTANTS.DELAYS.LOADING);
     }
 
     // 发布碎碎念
@@ -2515,9 +2571,9 @@ class MemberCenter {
      * 隐藏发布模态框
      */
     hideModal() {
+        this.cherryInstance = null;
         $(CONSTANTS.SELECTORS.publishModal).hide();
         $(CONSTANTS.SELECTORS.modalBody).empty();
-        this.cherryInstance = null;
     }
 
     /**
@@ -2854,7 +2910,7 @@ class MemberCenter {
                     </div>
                     <div class="mobile-card-row">
                         <div class="mobile-card-label">发布时间</div>
-                        <div class="mobile-card-content">${article.createTime}</div>
+                        <div class="mobile-card-content">${this.formatDefaultDateTime(article.createTime)}</div>
                     </div>
                     <div class="mobile-card-row">
                         <div class="mobile-card-label">操作</div>
@@ -2883,7 +2939,7 @@ class MemberCenter {
                 <div class="mobile-card">
                     <div class="mobile-card-row">
                         <div class="mobile-card-label">内容</div>
-                        <div class="mobile-card-content">${mumble.markdown}</div>
+                        <div class="mobile-card-content markdown-body">${this.converter.makeHtml(mumble.markdown)}</div>
                     </div>
                     <div class="mobile-card-row">
                         <div class="mobile-card-label">点赞数</div>
@@ -2989,6 +3045,10 @@ class MemberCenter {
             `;
             container.append(card);
         });
+    }
+
+    formatDefaultDateTime(dateTime) {
+        return moment(dateTime).format("YYYY/MM/DD HH:mm:ss");
     }
 }
 
