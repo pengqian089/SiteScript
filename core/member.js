@@ -292,19 +292,19 @@ class MemberCenter {
      */
     bindContentEvents() {
         // 文章相关
-        $('#newArticle').on('click', () => this.showArticleModal());
+        $('#newArticle').on('click', async () => await this.showArticleModal());
         $('#searchArticles').on('click', async () => await this.searchArticles());
 
         // 碎碎念相关
-        $('#newMumble').on('click', () => this.showMumbleModal());
+        $('#newMumble').on('click', async () => await this.showMumbleModal());
         $('#searchMumbles').on('click', async () => await this.searchMumbles());
 
         // 时间轴相关
-        $('#newTimeline').on('click', () => this.showTimelineModal());
+        $('#newTimeline').on('click', async () => await this.showTimelineModal());
         $('#searchTimeline').on('click', async () => await this.searchTimeline());
 
         // 相册相关
-        $('#uploadPhoto').on('click', () => this.showPhotoModal());
+        $('#uploadPhoto').on('click', async () => await this.showPhotoModal());
         $('#searchPhotos').on('click', async () => await this.searchPhotos());
     }
 
@@ -320,7 +320,7 @@ class MemberCenter {
         // 删除确认模态框
         $('#closeDeleteModal').on('click', () => this.hideDeleteModal());
         $('#cancelDelete').on('click', () => this.hideDeleteModal());
-        $('#confirmDelete').on('click', () => this.confirmDelete());
+        $('#confirmDelete').on('click', async () => await this.confirmDelete());
 
         // 点击背景关闭模态框
         $('.modal-overlay').on('click', (e) => {
@@ -1328,9 +1328,9 @@ class MemberCenter {
                 <tr>
                     <td class="cell-title">${item.title}</td>
                     <td class="cell-long-text">${item.content}</td>
-                    <td>${new Date(item.date).toLocaleString()}</td>
+                    <td>${moment(item.date).format("YYYY/MM/DD")}</td>
                     <td>${item.more ? `<a href="${item.more}" target="_blank">链接</a>` : '-'}</td>
-                    <td>${new Date(item.createTime).toLocaleString()}</td>
+                    <td>${this.formatDefaultDateTime(item.createTime)}</td>
                     <td class="cell-actions">
                         <div class="table-actions">
                             <button class="btn btn-sm btn-primary" onclick="memberCenter.editTimeline('${item.id}')">
@@ -1586,7 +1586,7 @@ class MemberCenter {
                 <input type="hidden" value="/Talk/Upload" id="mumbleUploadAddress"/>
                 <div class="form-group">
                     <label>内容 <span class="required">*</span></label>
-                    <div class="form-control" id="mumbleContent"></div>
+                    <div class="form-control" style="height:500px" id="mumbleContent"></div>
                 </div>
             `;
 
@@ -1603,41 +1603,94 @@ class MemberCenter {
     }
 
     // 显示时间轴模态框
-    showTimelineModal(timelineId = null) {
+    async showTimelineModal(timelineId = null) {
         const isEdit = timelineId !== null;
         $('#modalTitle').text(isEdit ? '编辑时间轴' : '发布时间轴');
         $('#confirmPublish').text(isEdit ? '保存修改' : '发布时间轴');
 
+        let timeline = null;
+        try {
+            if (isEdit) {
+                const response = await fetch(`/Timeline/Detail/${timelineId}`);
+                const result = await response.json();
+                if (!result.success) {
+                    this.showMessage(result.msg, 'error');
+                    return;
+                }
+                timeline = result.data;
+            }
+        } catch (e) {
+            this.showMessage(e.message, 'error');
+        }
         const modalBody = `
             ${this.generateRecordingSection()}
+            <input type="hidden" id="timelineId" value="${timeline?.id ?? ""}" />
+            <input type="hidden" value="/Timeline/Upload" id="timelineUploadAddress"/>
             <div class="form-group">
                 <label>标题 <span class="required">*</span></label>
-                <input type="text" class="form-control" id="timelineTitle" placeholder="请输入时间轴标题" value="${isEdit ? '示例标题' : ''}">
+                <input type="text" class="form-control" id="timelineTitle" placeholder="请输入时间轴标题" value="${timeline?.title ?? ""}">
             </div>
             <div class="form-group">
                 <label>更多链接</label>
-                <input type="url" class="form-control" id="timelineMore" placeholder="请输入链接地址" value="${isEdit ? 'https://example.com' : ''}">
+                <input type="url" class="form-control" id="timelineMore" placeholder="请输入链接地址" value="${timeline?.more ?? ""}">
             </div>
             <div class="form-group">
                 <label>时间轴日期 <span class="required">*</span></label>
-                <input type="date" class="form-control" id="timelineDate" value="${isEdit ? '2024-01-15' : ''}">
+                <input type="date" class="form-control" id="timelineDate" value="${this.formatDefaultDate(timeline?.date)}">
             </div>
             <div class="form-group">
                 <label>内容 <span class="required">*</span></label>
-                <textarea class="form-control" id="timelineContent" rows="6" placeholder="请输入时间轴内容">${isEdit ? '示例内容' : ''}</textarea>
+                <div class="form-control" style="height: 500px" id="timelineContent"></div>
             </div>
         `;
 
         $('#modalBody').html(modalBody);
         $('#publishModal').show();
 
+        this.initMarkdownEditor(timeline?.content ?? "", "timelineContent", "timelineUploadAddress");
+
         // 绑定录音相关事件
         this.bindRecordingEvents();
     }
 
     // 显示照片模态框
-    showPhotoModal(photoId = null) {
-        const isEdit = photoId !== null;
+    async showPhotoModal(photoId = null) {
+        let photo = null;
+        let tags = [];
+        try {
+            if (photoId !== null) {
+                const response = await fetch(`my/photos/get/${photoId}`);
+                const result = await response.json();
+                if (!result.success) {
+                    this.showMessage(result.msg, 'error');
+                    return;
+                }
+                photo = result.data;
+            }
+        } catch (e) {
+            this.showMessage(e.message, 'error');
+        }
+
+        try {
+            const response = await fetch('/my/photos/tags');
+            const result = await response.json();
+            if (!result.success) {
+                this.showMessage(result.msg, 'error');
+            }
+            tags = result.data ?? [];
+        } catch (e) {
+            this.showMessage('获取标签列表失败:' + e, 'error')
+        }
+
+        const tagsHtml = tags
+            .map(tag => `
+                <option value="${tag}" ${(photo?.tags.includes(tag) === true ? 'selected' : '')}>
+                    ${tag}
+                </option>
+                `)
+            .join('');
+
+        const isEdit = photo !== null;
         $('#modalTitle').text(isEdit ? '编辑照片' : '上传照片');
         $('#confirmPublish').text(isEdit ? '保存修改' : '上传照片');
 
@@ -1648,18 +1701,17 @@ class MemberCenter {
                 <input type="file" class="form-control" id="photoFile" accept="image/*">
             </div>
             ` : ''}
+            <input type="hidden" id="photoId" value="${photo?.id ?? ''}" />
             <div class="form-group">
                 <label>照片预览</label>
                 <div class="photo-preview">
-                    <img src="${isEdit ? '../core/images/default-avatar.png' : ''}" alt="照片预览" id="photoPreview" style="max-width: 100%; max-height: 300px; ${!isEdit ? 'display: none;' : ''}">
+                    <img src="${photo?.accessUrl ?? ''}" alt="照片预览" id="photoPreview" style="max-width: 100%; max-height: 300px; ${!isEdit ? 'display: none;' : ''}">
                 </div>
             </div>
             <div class="form-group">
                 <label>选择标签</label>
                 <select class="form-control" id="photoTags" multiple>
-                    <option value="风景">风景</option>
-                    <option value="自然">自然</option>
-                    <option value="人物">人物</option>
+                    ${tagsHtml}
                 </select>
             </div>
             <div class="form-group">
@@ -1668,7 +1720,7 @@ class MemberCenter {
             </div>
             <div class="form-group">
                 <label>描述</label>
-                <textarea class="form-control" id="photoDescription" rows="3" placeholder="请输入照片描述">${isEdit ? '示例描述' : ''}</textarea>
+                <textarea class="form-control" id="photoDescription" rows="3" placeholder="请输入照片描述">${photo?.description ?? ''}</textarea>
             </div>
         `;
 
@@ -2386,16 +2438,16 @@ class MemberCenter {
 
     }
 
-    editMumble(id) {
-        this.showMumbleModal(id);
+    async editMumble(id) {
+        await this.showMumbleModal(id);
     }
 
-    editTimeline(id) {
-        this.showTimelineModal(id);
+    async editTimeline(id) {
+        await this.showTimelineModal(id);
     }
 
-    editPhoto(id) {
-        this.showPhotoModal(id);
+    async editPhoto(id) {
+        await this.showPhotoModal(id);
     }
 
     // 删除项目
@@ -2405,15 +2457,58 @@ class MemberCenter {
     }
 
     // 确认删除
-    confirmDelete() {
+    async confirmDelete() {
         if (this.state.currentDeleteItem) {
             this.showLoading();
-            setTimeout(async () => {
+            let requestUrl = null;
+            const { type, id } = this.state.currentDeleteItem;
+            switch (type) {
+                case "article":
+                    requestUrl = "/Article/Delete";
+                    break;
+                case "mumble":
+                    requestUrl = "/Talk/Delete";
+                    break;
+                case "timeline":
+                    requestUrl = "/Timeline/Delete";
+                    break;
+                case "photo":
+                    requestUrl = "/my/photos/delete";
+                    break;
+                default:
+                    this.hideLoading();
+                    this.hideDeleteModal();
+                    this.showMessage('未匹配到的类型：' + type, 'error');
+                    return;
+            }
+            await this.deleteHandle(requestUrl, id);
+        }
+    }
+
+
+    async deleteHandle(requestUrl, id) {
+        try {
+            const formData = new FormData();
+            formData.append('id', id);
+            const response = await fetch(requestUrl, {
+                method: "POST",
+                body: formData
+            });
+            const result = await response.json();
+            if (!result.success) {
                 this.hideLoading();
                 this.hideDeleteModal();
-                this.showMessage('删除成功', 'success');
-                await this.loadPageData();
-            }, CONSTANTS.DELAYS.LOADING);
+                this.showMessage(result.msg, 'error');
+                return;
+            }
+            this.hideLoading();
+            this.hideDeleteModal();
+            this.showMessage('删除成功', 'success');
+            await this.loadPageData();
+        } catch (e) {
+            this.hideLoading();
+            this.hideDeleteModal();
+            this.showMessage(e.message, 'error');
         }
     }
 
@@ -2441,11 +2536,11 @@ class MemberCenter {
         if (modalTitle.includes('文章')) {
             await this.publishArticle();
         } else if (modalTitle.includes('碎碎念')) {
-            this.publishMumble();
+            await this.publishMumble();
         } else if (modalTitle.includes('时间轴')) {
-            this.publishTimeline();
+            await this.publishTimeline();
         } else if (modalTitle.includes('照片')) {
-            this.publishPhoto();
+            await this.publishPhoto();
         }
     }
 
@@ -2512,28 +2607,54 @@ class MemberCenter {
     }
 
     // 发布碎碎念
-    publishMumble() {
-        const content = $('#mumbleContent').val();
+    async publishMumble() {
+        let content = null;
+        let html = null;
+        const id = $("#mumbleId").val();
+        if (this.cherryInstance?.getMarkdown && this.cherryInstance.getHtml) {
+            content = this.cherryInstance.getMarkdown();
+            html = this.cherryInstance.getHtml();
+        }
 
         if (!content) {
             this.showMessage('请输入内容', 'warning');
             return;
         }
-
         this.showLoading();
-        setTimeout(async () => {
-            this.hideLoading();
+        try {
+            const formData = new FormData();
+            formData.append('markdown', content);
+            formData.append('html', html);
+            formData.append('id', id);
+
+            const response = await fetch('/Talk/Publish', {
+                method: "POST",
+                body: formData
+            });
+            const result = await response.json();
+            if (!result.success) {
+                this.hideLoading();
+                this.showMessage(result.msg, 'error');
+                return;
+            }
             this.hideModal();
             this.showMessage('碎碎念发布成功', 'success');
+            this.hideLoading();
             await this.loadMumbles();
-        }, CONSTANTS.DELAYS.LOADING);
+        } catch (e) {
+            this.hideLoading();
+            this.showMessage(e.message, 'error');
+        }
+
     }
 
     // 发布时间轴
-    publishTimeline() {
+    async publishTimeline() {
         const title = $('#timelineTitle').val();
         const date = $('#timelineDate').val();
-        const content = $('#timelineContent').val();
+        const id = $('#timelineId').val();
+        const more = $('#timelineMore').val();
+        const content = this.cherryInstance?.getMarkdown();
 
         if (!title || !date || !content) {
             this.showMessage('请填写必填字段', 'warning');
@@ -2541,25 +2662,80 @@ class MemberCenter {
         }
 
         this.showLoading();
-        setTimeout(async () => {
+        try {
+            const formData = new FormData();
+            formData.append('id', id);
+            formData.append('title', title);
+            formData.append('date', date);
+            formData.append('more', more);
+            formData.append('content', content);
+            const response = await fetch('/Timeline/Publish', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            if (!result.success) {
+                this.showMessage(result.msg, 'error');
+                this.hideLoading();
+                return;
+            }
             this.hideLoading();
             this.hideModal();
             this.showMessage('时间轴发布成功', 'success');
             await this.loadTimeline();
-        }, CONSTANTS.DELAYS.LOADING);
+        } catch (e) {
+            this.showMessage(e.message, 'error');
+        }
     }
 
     // 发布照片
-    publishPhoto() {
+    async publishPhoto() {
         const description = $('#photoDescription').val();
+        const tags = $("#photoTags").val() ?? [];
+        const id = $('#photoId').val();
+        const file = $('#photoFile')[0]?.files[0] ?? null;
+        const newTag = $('#photoExtraTags').val();
+
+        if (newTag !== null && newTag.trim() !== "") {
+            tags.push(newTag);
+        }
+
+        if (tags.length === 0) {
+            this.showMessage('请选择标签', 'error');
+            return;
+        }
+
+        if (!id && !file) {
+            this.showMessage('请选择照片', 'error');
+            return;
+        }
+        const formData = new FormData();
+        formData.append('photo', file);
+        formData.append('id', id);
+        formData.append('description', description);
+        for (const tag of tags) {
+            formData.append('tags', tag);
+        }
 
         this.showLoading();
-        setTimeout(async () => {
+        try {
+            const response = await fetch('/my/photos/publish', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            if (!result.success) {
+                this.showMessage(result.msg, 'error');
+                this.hideLoading();
+                return;
+            }
             this.hideLoading();
             this.hideModal();
             this.showMessage('照片上传成功', 'success');
             await this.loadPhotos();
-        }, CONSTANTS.DELAYS.LOADING);
+        } catch (e) {
+            this.showMessage(e.message, 'error');
+        }
     }
 
     /**
@@ -2951,7 +3127,7 @@ class MemberCenter {
                     </div>
                     <div class="mobile-card-row">
                         <div class="mobile-card-label">发布时间</div>
-                        <div class="mobile-card-content">${mumble.createTime}</div>
+                        <div class="mobile-card-content">${this.formatDefaultDateTime(mumble.createTime)}</div>
                     </div>
                     <div class="mobile-card-row">
                         <div class="mobile-card-label">操作</div>
@@ -2984,11 +3160,13 @@ class MemberCenter {
                     </div>
                     <div class="mobile-card-row">
                         <div class="mobile-card-label">内容</div>
-                        <div class="mobile-card-content">${item.content}</div>
+                        <div class="mobile-card-content markdown-body">
+                            ${this.converter.makeHtml(item.content)}
+                        </div>
                     </div>
                     <div class="mobile-card-row">
                         <div class="mobile-card-label">时间轴日期</div>
-                        <div class="mobile-card-content">${new Date(item.date).toLocaleString()}</div>
+                        <div class="mobile-card-content">${moment(item.date).format("YYYY/MM/DD")}</div>
                     </div>
                     <div class="mobile-card-row">
                         <div class="mobile-card-label">更多链接</div>
@@ -2998,7 +3176,7 @@ class MemberCenter {
                     </div>
                     <div class="mobile-card-row">
                         <div class="mobile-card-label">发布时间</div>
-                        <div class="mobile-card-content">${new Date(item.createTime).toLocaleString()}</div>
+                        <div class="mobile-card-content">${this.formatDefaultDateTime(item.createTime)}</div>
                     </div>
                     <div class="mobile-card-row">
                         <div class="mobile-card-label">操作</div>
@@ -3049,6 +3227,13 @@ class MemberCenter {
 
     formatDefaultDateTime(dateTime) {
         return moment(dateTime).format("YYYY/MM/DD HH:mm:ss");
+    }
+
+    formatDefaultDate(date) {
+        if (!date) {
+            return "";
+        }
+        return moment(date).format("YYYY-MM-DD");
     }
 }
 
