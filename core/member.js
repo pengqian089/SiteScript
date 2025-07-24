@@ -202,6 +202,10 @@ class MemberCenter {
             this.initTheme();
             this.initPageFromHash().then();
             this.initLayoutVisibility();
+
+            document.querySelectorAll("pre code").forEach((block) => {
+                Prism.highlightElement(block);
+            });
         } catch (error) {
             console.error('初始化失败:', error);
             this.showMessage('系统初始化失败，请刷新页面重试', 'error');
@@ -548,7 +552,13 @@ class MemberCenter {
         try {
             // 模拟加载用户信息
             const response = await fetch('/my/info');
-            const userInfo = await response.json();
+            const result = await response.json();
+            if (!result.success) {
+                this.showMessage(result.msg, 'error');
+                return;
+            }
+            const userInfo = result.data;
+
             // 缓存用户信息
             this.dataCache.userInfo = userInfo;
 
@@ -989,6 +999,9 @@ class MemberCenter {
                 await this.loadPhotos();
                 break;
         }
+        document.querySelectorAll("pre code").forEach((block) => {
+            Prism.highlightElement(block);
+        });
     }
 
     // 加载文章列表
@@ -1249,7 +1262,7 @@ class MemberCenter {
             const row = `
                 <tr>
                     <td class="cell-long-text">
-                        <pre>${mumble.markdown}</pre>
+                        <pre><code class="lang-markdown">${mumble.markdown}</code></pre>
                     </td>
                     <td class="cell-status">${mumble.like}</td>
                     <td class="cell-status">${mumble.commentCount}</td>
