@@ -51,7 +51,7 @@ layui.use(["element", "layer", "carousel", "util", "flow", "form", "upload"],
         flow.lazyimg();
 
 
-        if (layui.device().mobile === false) {
+        if ($(window).width() >= 640) {
             //雨滴背景
             try {
                 const canvas = document.querySelector("#can-back-round");
