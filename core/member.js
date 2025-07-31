@@ -936,14 +936,11 @@ class MemberCenter {
                 : '/my/bind-two-factor';
 
             this.showLoading();
+            let formData = new FormData();
+            formData.append('pinCode', pinCode);
             const response = await fetch(fetchUrl, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    pinCode: pinCode
-                })
+                body: formData
             });
             const result = await response.json();
             this.hideLoading();
