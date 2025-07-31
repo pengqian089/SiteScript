@@ -12,7 +12,7 @@ layui.use(["element"], function () {
     //碎碎念翻页
     $(document).pjax("#talk-pager a", ".mumble-list");
     //书签类别选择
-    $(document).pjax(".right-category-tags-v2 a.right-category-tag-v2", ".blog-body");
+    $(document).pjax(".right-category-tags-v2 a.right-category-tag-v2,.bookmark .category-box .category", ".blog-body");
     $(document).pjax(".code-box .box-rows .row .header a", ".code-box .box-rows");
     if ($.support.pjax) {
         $(".tags a").on("click",
