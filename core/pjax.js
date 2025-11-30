@@ -1,20 +1,18 @@
 "use strict";
 
-layui.use(["element"],function(){
+layui.use(["element"], function () {
     let element = layui.element,
         form = layui.form;
 
     $.pjax.defaults.timeout = 20000;
     $(document).pjax("nav.blog-nav ul.layui-nav>li>a,a[data-pjax]", ".blog-body");
     //文章翻页
-    $(document).pjax("#blog-list a,.tags a", ".blog-main-left");
+    $(document).pjax("#blog-list a", ".blog-main-left");
     $(document).pjax("#articl-comment a", "#blog-comment", { scrollTo: false });
     //碎碎念翻页
     $(document).pjax("#talk-pager a", ".mumble-list");
-    //今日热榜翻页
-    $(document).pjax("#topic-list a", ".blog-main-left");
     //书签类别选择
-    $(document).pjax(".bookmark .category-box a.category", ".blog-body");
+    $(document).pjax(".right-category-tags-v2 a.right-category-tag-v2,.bookmark .category-box .category", ".blog-body");
     $(document).pjax(".code-box .box-rows .row .header a", ".code-box .box-rows");
     if ($.support.pjax) {
         $(".tags a").on("click",
@@ -29,6 +27,9 @@ layui.use(["element"],function(){
 
     $(document).on("pjax:send", function () {
         NProgress.start();
+        
+        // 清理相册资源
+        window.cleanupAlbums();
     });
 
     let titleValue = "";
@@ -62,4 +63,10 @@ function pjaxCompleteInit() {
     $("time.timeago").relativeTime();
     initVideoPlayer().catch(x => console.log(x));
     initFetchContent().catch(x => console.log(x));
+    if (window.innerWidth <= 768) {
+        initMobileSearch();
+    }
+    
+    // 初始化相册（如果是相册页面）
+    window.initAlbums();
 }

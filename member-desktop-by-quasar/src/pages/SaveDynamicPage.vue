@@ -1,9 +1,10 @@
 <script>
 import _ from "lodash";
 // import * as monaco from 'monaco-editor';
-import {warning} from '../common'
+import {warning, postAsync, fetchGetAsync, success} from '../common'
 import loader from '@monaco-editor/loader';
 import Enumerable from 'linq';
+import {useRouter, useRoute} from "vue-router";
 
 export default {
   data: () => ({
@@ -12,21 +13,17 @@ export default {
     allTabs: [],
     initNumber: 1,
     pageName: null,
-    initHtmlContent:
-      `<!DOCTYPE html>
-
-<html lang="zh-cn">
-    <head>
-        <title>new page ${this.initNumber}</title>
-    </head>
-    <body>
-        <h1>NEW PAGE ${this.initNumber}</h1>
-    </body>
-</html>`,
     saving: false,
+    router: useRouter(),
+    loading: false,
+    canUseTab: true
   }),
   methods: {
     addTab(icon, label, type, content = "") {
+      if (!this.canUseTab) {
+        warning("不能添加标签");
+        return;
+      }
       let tabName = `tab${this.initNumber}`;
       this.allTabs.push({
         icon: icon,
@@ -38,14 +35,42 @@ export default {
       this.initNumber++;
       return tabName;
     },
-    addHtml() {
-      return this.addTab('html', `HTML TAB ${this.initNumber}`, 1, this.initHtmlContent);
+    initHtmlContent() {
+      return `<!DOCTYPE html>
+
+<html lang="zh-cn">
+    <head>
+        <title>new page ${this.initNumber}</title>
+    </head>
+    <body>
+        <h1>NEW PAGE ${this.initNumber}</h1>
+    </body>
+</html>`
     },
-    addCss() {
-      return this.addTab('css', `CSS TAB ${this.initNumber}`, 2);
+    addHtml(content = null) {
+      if (Enumerable.from(this.allTabs).any(x => x.type === 1)) {
+        warning("已有HTML，不能继续添加！");
+        return;
+      }
+      if (content === null) {
+        return this.addTab('html', `HTML TAB ${this.initNumber}`, 1, this.initHtmlContent());
+      } else {
+        return this.addTab('html', content.label, 1, content.content);
+      }
     },
-    addScript() {
-      return this.addTab('javascript', `SCRIPT TAB ${this.initNumber}`, 3);
+    addCss(content = null) {
+      if (content === null) {
+        return this.addTab('css', `CSS TAB ${this.initNumber}`, 2);
+      } else {
+        return this.addTab('css', content.label, 2, content.content);
+      }
+    },
+    addScript(content = null) {
+      if (content === null) {
+        return this.addTab('javascript', `SCRIPT TAB ${this.initNumber}`, 3);
+      } else {
+        return this.addTab('javascript', content.label, 3, content.content);
+      }
     },
     changeTab() {
       for (const item of this.allTabs) {
@@ -82,7 +107,10 @@ export default {
       }
     },
     closeTab(tabName) {
-      console.log(tabName);
+      if (!this.canUseTab) {
+        warning("不能移除标签");
+        return;
+      }
       if (this.allTabs.length === 1) {
         warning("至少要保留一个标签");
         return;
@@ -97,18 +125,106 @@ export default {
       }
       console.log(index);
     },
-    async save(){
+    save() {
+      this.saving = true;
 
+      const allTabs = Enumerable.from(this.allTabs);
+      const htmlTab = allTabs.firstOrDefault(x => x.type === 1);
+
+      console.log(allTabs);
+
+      if (htmlTab == null) {
+        this.saving = false;
+        warning("没有HTML");
+        return;
+      }
+      if (_.isEmpty(htmlTab.label)) {
+        this.saving = false;
+        warning("请输入名称");
+        return;
+      }
+      if (_.isEmpty(htmlTab.content)) {
+        this.saving = false;
+        warning("请输入内容");
+        return;
+      }
+
+      let styleContents = {};
+      allTabs.where(x => x.type === 2)
+        .where(x => !_.isEmpty(x.label) && !_.isEmpty(x.content))
+        .forEach((x, y) => {
+          styleContents[y] = {name: x.label, content: x.content}
+        });
+
+      let scriptContents = {};
+      allTabs.where(x => x.type === 3)
+        .where(x => !_.isEmpty(x.label) && !_.isEmpty(x.content))
+        .forEach((x, y) => {
+          scriptContents[y] = {name: x.label, content: x.content}
+        });
+
+      let pageInformation = {
+        htmlContent: {
+          name: htmlTab.label,
+          content: htmlTab.content
+        },
+        styleContents: styleContents,
+        scriptContents: scriptContents
+      };
+      console.log(pageInformation);
+      let that = this;
+      let url = this.canUseTab ? "/Dynamic/Create" : "/Dynamic/Save";
+      postAsync({url: url, data: pageInformation})
+        .then(() => {
+          success("保存成功");
+          this.router.push({name: 'dynamic-pages'});
+        })
+        .finally(() => {
+          that.saving = false;
+        });
+
+    },
+    back() {
+      this.router.push({name: 'dynamic-pages'});
     }
   },
-  mounted() {
-    if (this.allTabs.length === 0) {
-      this.tab = this.addHtml();
+  async mounted() {
+    this.loading = true;
+    const {params} = useRoute();
+    let id = params.id;
+    let pageInformation = null;
+    if (!_.isEmpty(id)) {
+      pageInformation = await fetchGetAsync({url: `/Dynamic/Find/${id}`});
     }
+    if (this.allTabs.length === 0) {
+      if (pageInformation != null) {
+        console.log(pageInformation);
+        let content = {label: pageInformation.id, content: pageInformation.content};
+        this.tab = this.addHtml(content);
+        if (!_.isEmpty(pageInformation.scripts)) {
+          for (const item of pageInformation.scripts) {
+            let scriptContent = {label: item.name, content: item.content};
+            this.addScript(scriptContent);
+          }
+        }
+        if (!_.isEmpty(pageInformation.styles)) {
+          for (const item of pageInformation.styles) {
+            let styleContent = {label: item.name, content: item.content};
+            this.addCss(styleContent);
+          }
+        }
+      } else {
+        this.tab = this.addHtml();
+      }
+    }
+
+    this.canUseTab = pageInformation === null;
+    this.loading = false;
   },
   updated() {
     let elementEditor = document.getElementById(`${this.tab}_editor`);
-    if (!_.isEmpty(this.tab) && elementEditor !== null) {
+    let loaded = elementEditor?.dataset?.loaded;
+    if (!_.isEmpty(this.tab) && elementEditor !== null && loaded !== "true") {
       let {content, type} = this.getTabData();
       let language = "plaintext";
       switch (type) {
@@ -132,6 +248,7 @@ export default {
           language: language,
           theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? "vs-dark" : "vs",
         });
+        elementEditor.dataset.loaded = "true";
         let that = this;
         editor.getModel().onDidChangeContent((e) => {
           let editorContent = editor.getValue();
@@ -145,7 +262,33 @@ export default {
 </script>
 
 <template>
-  <div class="q-pa-md">
+  <div class="q-pa-md" v-if="loading">
+    <q-card>
+      <q-item>
+        <q-item-section avatar>
+          <q-skeleton type="QAvatar"/>
+        </q-item-section>
+
+        <q-item-section>
+          <q-item-label>
+            <q-skeleton type="text"/>
+          </q-item-label>
+          <q-item-label caption>
+            <q-skeleton type="text"/>
+          </q-item-label>
+        </q-item-section>
+      </q-item>
+
+      <q-skeleton height="200px" square/>
+
+      <q-card-actions align="right" class="q-gutter-md">
+        <q-skeleton type="QBtn"/>
+        <q-skeleton type="QBtn"/>
+      </q-card-actions>
+    </q-card>
+
+  </div>
+  <div class="q-pa-md" v-else>
     <q-toolbar class="bg-purple text-white shadow-2 rounded-borders">
       <q-btn color="primary" icon="menu" label="新建TAB">
         <q-menu>
@@ -184,11 +327,13 @@ export default {
         </div>
       </q-tab-panel>
     </q-tab-panels>
-    <q-btn color="primary" label="保存&发布" :loading="saving">
+    <q-btn color="primary" label="保存&发布" :loading="saving" @click="save">
       <template v-slot:loading>
         <q-spinner-hourglass class="on-left"/>
         保存中...
       </template>
+    </q-btn>
+    <q-btn color="secondary" label="返回列表" @click="back">
     </q-btn>
   </div>
 </template>
@@ -196,11 +341,6 @@ export default {
 <style scoped>
 .editor {
   width: 100%;
-  height: calc(100vh - 191px - 24px);
-}
-
-.tab-item {
-  display: flex;
-  flex-wrap: r;
+  height: calc(100vh - 191px - 40px);
 }
 </style>

@@ -10,9 +10,12 @@ export default {
   data: () => ({
     title: "Dynamic Page",
     $q: useQuasar(),
+    site: document.querySelector("meta[name='site']")?.getAttribute("content"),
     rows: [],
     columns: [
       {label: "页面名称", align: "center", name: "id", field: "id"},
+      {label: "预览", align: "center", name: "preview", field: "preview"},
+      {label: "类型", align: "center", name: "contentTypeStr", field: "contentTypeStr"},
       {
         label: "创建时间",
         align: "center",
@@ -71,9 +74,7 @@ export default {
       this.loading = false;
     },
     editItem(item) {
-      // success(`to edit ${item.id}`);
-      // this.router.push({name: `edit-article`, params: {id: item.id}});
-      // todo
+      this.router.push({name: 'save-dynamic-page', params: {id: item.id}});
     },
     async deleteItem(item) {
       let that = this;
@@ -99,7 +100,7 @@ export default {
       });
     },
     publish() {
-      this.router.push({name: 'save-dynamic-page'});
+      this.router.push({name: 'save-dynamic-page', params: {id: ''}});
     },
     async reset() {
       this.name = "";
@@ -135,7 +136,7 @@ export default {
       </template>
       <template v-slot:header="props">
         <q-tr :props="props">
-          <q-th auto-width />
+          <q-th auto-width/>
           <q-th
             v-for="col in props.cols"
             :key="col.name"
@@ -156,32 +157,37 @@ export default {
             :key="col.name"
             :props="props"
           >
-            {{ col.value }}
+            <a v-if="col.name === 'preview'" class="preview" :href="site + '/act/' + props.row.id" target="_blank">预览</a>
+            <div v-else-if="col.name === 'actions'" style="margin: 0 auto;text-align:center">
+              <q-btn color="primary" icon="edit" size="sm" label="编辑" @click="editItem(props.row)"/>
+              <span v-if="$q.screen.lt.md" style="display: block;"></span>
+              <span v-else style="margin-left: 1em"></span>
+              <q-btn color="red" icon="delete" size="sm" label="删除" @click="deleteItem(props.row)"/>
+            </div>
+            <span v-else>{{ col.value }}</span>
           </q-td>
         </q-tr>
         <q-tr v-show="props.expand" :props="props">
           <q-td colspan="100%">
-            <pre><code class="language-html">{{ props.row.htmlContent }}</code></pre>
+            <pre><code class="language-html">{{ props.row.content }}</code></pre>
           </q-td>
         </q-tr>
-      </template>
-      <template v-slot:body-cell-actions="props">
-        <q-td key="id">
-          <div style="margin: 0 auto;text-align:center">
-            <q-btn color="primary" icon="edit" size="sm" label="编辑" @click="editItem(props.row)"/>
-            <span v-if="$q.screen.lt.md" style="display: block;"></span>
-            <span v-else style="margin-left: 1em"></span>
-            <q-btn color="red" icon="delete" size="sm" label="删除" @click="deleteItem(props.row)"/>
-          </div>
-        </q-td>
       </template>
     </q-table>
   </div>
 </template>
 
 <style scoped>
-pre{
+pre {
   max-height: 500px;
   overflow: auto;
+}
+
+.preview {
+  color: var(--q-primary);
+}
+
+.preview:hover{
+  color:var(--q-secondary);
 }
 </style>

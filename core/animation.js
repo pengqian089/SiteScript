@@ -16,20 +16,28 @@
         leftOut();
     });
 
-    //类别导航开关点击事件
-    $(document).delegate(".category-toggle", "click", function () {
-        categroyIn();
+    //类别导航开关点击事件 - 更新为version 2.0类名
+    $(document).delegate(".right-category-toggle-v2", "click", function () {
+        categoryToggleV2();
     });
 
-    //类别导航点击事件，用来关闭类别导航
-    $(document).delegate(".article-category", "click", function () {
-        categoryOut();
+    //类别导航遮罩点击事件 - 关闭类别导航
+    $(document).delegate(".right-category-mask-v2", "click", function () {
+        categoryOutV2();
     });
 
-    //具体类别点击事件
-    $(document).delegate(".article-category > a", "click", function () {
-        $(".article-category > a").removeClass("tag-this");
-        $(this).addClass("tag-this");
+    //具体类别点击事件 - 更新为version 2.0类名
+    $(document).delegate(".right-category-tag-v2", "click", function () {
+        $(".right-category-tag-v2").removeClass("right-category-tag-active-v2");
+        $(this).addClass("right-category-tag-active-v2");
+    });
+
+    // 检测屏幕尺寸变化，重置移动端分类导航状态
+    $(window).resize(function() {
+        if ($(window).width() > 768) {
+            // 大屏幕时重置移动端状态
+            categoryOutV2();
+        }
     });
 })();
 
@@ -69,25 +77,84 @@ function leftOut() {
     $(".blog-nav-left").removeClass("layui-show");
 }
 
-//显示类别导航
-function categroyIn() {
-    $(".category-toggle").addClass("layui-hide");
-    $(".article-category")
-        .unbind("webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend");
-
-    $(".article-category").removeClass("categoryOut");
-    $(".article-category").addClass("categoryIn");
-    $(".article-category").addClass("layui-show");
+// Version 2.0 - 切换分类导航显示/隐藏
+function categoryToggleV2() {
+    const $categoryNav = $(".right-category-nav-v2");
+    const $toggleBtn = $(".right-category-toggle-v2");
+    const $mask = $(".right-category-mask-v2");
+    
+    // 检查当前状态
+    const isVisible = $categoryNav.hasClass("category-visible-v2");
+    
+    if (isVisible) {
+        categoryOutV2();
+    } else {
+        categoryInV2();
+    }
 }
 
-//隐藏类别导航
-function categoryOut() {
-    $(".article-category").on("webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend",
-        function () {
-            $(".article-category").removeClass("layui-show");
-            $(".category-toggle").removeClass("layui-hide");
-        });
+// Version 2.0 - 显示分类导航
+function categoryInV2() {
+    const $categoryNav = $(".right-category-nav-v2");
+    const $toggleBtn = $(".right-category-toggle-v2");
+    const $mask = $(".right-category-mask-v2");
+    
+    // 清除之前的动画事件绑定
+    $categoryNav.unbind("webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend");
+    
+    // 显示遮罩层
+    $mask.addClass("mask-visible-v2");
+    
+    // 显示分类导航并添加进入动画
+    $categoryNav.removeClass("category-hidden-v2 category-slide-out-v2");
+    $categoryNav.addClass("category-visible-v2 category-slide-in-v2");
+    $categoryNav.show();
+    
+    // 切换按钮状态
+    $toggleBtn.addClass("toggle-active-v2");
+    
+    // 动画结束后清除动画类
+    $categoryNav.on("webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend", function() {
+        $categoryNav.removeClass("category-slide-in-v2");
+        $categoryNav.unbind("webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend");
+    });
+}
 
-    $(".article-category").removeClass("categoryIn");
-    $(".article-category").addClass("categoryOut");
+// Version 2.0 - 隐藏分类导航
+function categoryOutV2() {
+    const $categoryNav = $(".right-category-nav-v2");
+    const $toggleBtn = $(".right-category-toggle-v2");
+    const $mask = $(".right-category-mask-v2");
+    
+    // 如果不可见，直接返回
+    if (!$categoryNav.hasClass("category-visible-v2")) {
+        return;
+    }
+    
+    // 隐藏遮罩层
+    $mask.removeClass("mask-visible-v2");
+    
+    // 添加退出动画
+    $categoryNav.removeClass("category-slide-in-v2");
+    $categoryNav.addClass("category-slide-out-v2");
+    
+    // 切换按钮状态
+    $toggleBtn.removeClass("toggle-active-v2");
+    
+    // 动画结束后隐藏元素
+    $categoryNav.on("webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend", function() {
+        $categoryNav.removeClass("category-visible-v2 category-slide-out-v2");
+        $categoryNav.addClass("category-hidden-v2");
+        $categoryNav.hide();
+        $categoryNav.unbind("webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend");
+    });
+}
+
+// 保留原有的函数名以保持向后兼容
+function categroyIn() {
+    categoryInV2();
+}
+
+function categoryOut() {
+    categoryOutV2();
 }

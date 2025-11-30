@@ -1,8 +1,10 @@
+// noinspection t
+
 "use strict";
 
 (async function () {
     // 代码块工具
-    codeBlockTools();
+    //codeBlockTools();
     // 时间本地化
     moment.locale("zh-cn");
     // 延迟加载图片
@@ -69,49 +71,39 @@ function lightCode() {
 /**
  * 代码块工具栏
  */
-function codeBlockTools() {
-    $('pre[class*=language-]').wrap('<div class="code-area" style="position: relative"></div>');
+function processBlockTools($preCode) {
+    if($preCode.length === 0 || $preCode.parent().hasClass("code-area")){
+        return;
+    }
+    $preCode.wrap('<div class="code-area" style="position: relative"></div>');
+    let $codeArea = $preCode.parent();
 
     // 代码收缩
     let $codeExpand = $('<i class="fa fa-angle-up fa-fw code-expand" aria-hidden="true" title="折叠"></i>');
-    $('.code-area').prepend($codeExpand);
-    $('.code-expand').on('click', function () {
-        if ($(this).parent().hasClass('code-closed')) {
-            $(this).siblings('pre').find('code').show();
-            $(this).siblings('pre').find('.line-highlight').show();
+    $codeArea.prepend($codeExpand);
+    $codeExpand.on('click', function () {
+        if ($codeArea.hasClass('code-closed')) {
+            $preCode.find('code').show();
+            $preCode.find('.line-highlight').show();
             $(this).parent().removeClass('code-closed');
         } else {
-            $(this).siblings('pre').find('code').hide();
-            $(this).siblings('pre').find('.line-highlight').hide();
-            $(this).parent().addClass('code-closed');
+            $preCode.find('code').hide();
+            $preCode.find('.line-highlight').hide();
+            $codeArea.addClass('code-closed');
         }
     });
 
     // 复制
     let $copyIcon = $('<i class="fa fa-copy fa-fw code_copy" title="复制代码" aria-hidden="true"></i>')
     let $notice = $('<div class="codecopy_notice"></div>')
-    $('.code-area').prepend($copyIcon)
-    $('.code-area').prepend($notice)
-
-    function copy(text, ctx) {
-        if (document.queryCommandSupported && document.queryCommandSupported('copy')) {
-            try {
-                document.execCommand('copy') // Security exception may be thrown by some browsers.
-                layer.msg("复制成功");
-            } catch (ex) {
-                layer.msg("复制失败");
-                return false;
-            }
-        } else {
-            layer.msg("浏览器不支持");
-        }
-    }
+    $codeArea.prepend($copyIcon)
+    $codeArea.prepend($notice)
 
     // 复制
-    $('.code-area .fa-copy').on('click', function () {
+    $copyIcon.on('click', function () {
         let selection = window.getSelection()
         let range = document.createRange()
-        range.selectNodeContents($(this).siblings('pre').find("code")[0])
+        range.selectNodeContents($preCode.find("code")[0])
         selection.removeAllRanges()
         selection.addRange(range)
         let text = selection.toString()
@@ -121,9 +113,8 @@ function codeBlockTools() {
 
     // 显示代码语言
     let $highlightLang = $('<div class="code_lang" title="代码语言"></div>');
-    let $pre = $('pre');
-    $pre.before($highlightLang);
-    $pre.each(function () {
+    $preCode.before($highlightLang);
+    $preCode.each(function () {
         // let codeLanguage = $(this).attr('class');
         // if (!codeLanguage) {
         //     return true;
@@ -139,6 +130,27 @@ function codeBlockTools() {
         //let langName = codeLanguage.replace("line-numbers", "").trim().replace("language-", "").trim();
 
     });
+}
+
+function codeBlockTools(){
+    let $preCode = $('pre[class*=language-]');
+    for(let item of $preCode){
+        processBlockTools($(item));
+    }
+}
+
+function copy(text, ctx) {
+    if (document.queryCommandSupported && document.queryCommandSupported('copy')) {
+        try {
+            document.execCommand('copy') // Security exception may be thrown by some browsers.
+            layer.msg("复制成功");
+        } catch (ex) {
+            layer.msg("复制失败");
+            return false;
+        }
+    } else {
+        layer.msg("浏览器不支持");
+    }
 }
 
 /**
@@ -203,6 +215,9 @@ async function initVideoPlayer() {
             videoItems = await response.json();
         }
         playerElement.style.marginBottom = "1em";
+        if (window.innerWidth <= 550){
+            playerElement.style.marginBottom = "4em";
+        }
         playerElement.style.aspectRatio = "16/9";
         let index = Math.floor(Math.random() * videoItems.length);
         videoPlayer(playerElement, videoItems[index]["m3u8"], videoItems[index]["id"]);
