@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="JavaScriptLibraryMappings">
-    <file url="PROJECT" libraries="{ace, aplayer, art-player, base64, dplayer, editor.md, gridmanager, hls.js, jQuery, lazyload, moment, music-player, nplayer, nplayer-danmaku, other, photoswipe, prism, showdown, signalr, tocbot}" />
+    <file url="PROJECT" libraries="{ace, aplayer, art-player, base64, cherry-markdown, dplayer, editor.md, gridmanager, hls.js, jQuery, lazyload, moment, music-player, nplayer, nplayer-danmaku, other, photoswipe, prism, showdown, signalr, tocbot}" />
   </component>
 </project>

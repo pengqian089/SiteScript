@@ -2,6 +2,45 @@
 
 
 (function(){
+    // 检测无图片书签并添加类名（用于兼容性）
+    function detectNoImageBookmarks() {
+        $('.bookmark-item .bookmark-card').each(function() {
+            const $card = $(this);
+            // 查找直接子级的图片元素，排除图标
+            const $mainImages = $card.children('img').filter(':not(.bookmark-icon)');
+            
+            // 或者查找懒加载的图片（可能有data-src属性）
+            const $lazyImages = $card.find('img[data-src]:not(.bookmark-icon)');
+            
+            const hasMainImage = $mainImages.length > 0 || $lazyImages.length > 0;
+            
+            if (!hasMainImage) {
+                $card.addClass('no-image');
+            } else {
+                $card.removeClass('no-image');
+            }
+        });
+    }
+
+    // 页面加载时执行检测
+    $(document).ready(function() {
+        detectNoImageBookmarks();
+    });
+
+    // PJAX加载后重新检测
+    $(document).on('pjax:complete', function() {
+        setTimeout(detectNoImageBookmarks, 100); // 延迟一点执行，确保DOM更新完成
+    });
+
+    // 监听懒加载图片加载完成后重新检测
+    $(document).on('load', '.bookmark-card img:not(.bookmark-icon)', function() {
+        detectNoImageBookmarks();
+    });
+
+    // 监听懒加载库（如果使用）的图片加载事件
+    $(document).on('lazyloaded', '.bookmark-card img:not(.bookmark-icon)', function() {
+        detectNoImageBookmarks();
+    });
     let bookmarkSearchValue = "";
     // 书签搜索框输入
     $(document).delegate(".bookmark .search-box input[type=search]", "input", function () {
