@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 音频录制控制器
  * 封装 MediaRecorder API 和相关 UI 逻辑
  */
@@ -251,6 +251,7 @@ class AudioRecorder {
         this.state.playbackTimer = setInterval(() => {
             if (this.media.audioElement) {
                 this.state.currentTime = this.media.audioElement.currentTime;
+                this.updateTimeDisplay(this.state.currentTime, this.selectors.currentTime);
                 this.updatePlaybackProgress();
             }
         }, this.config.UPDATE_INTERVAL);
@@ -275,35 +276,67 @@ class AudioRecorder {
             return;
         }
 
-        const formData = new FormData();
-        formData.append('audio', this.media.audioBlob, 'recording.webm');
-        
-        // 获取其他表单数据，如内容
-        const content = $('#mumbleContent').val();
-        if (content) formData.append('content', content);
+        // 确定录音文件扩展名
+        let extension = 'webm';
+        if (this.media.audioBlob.type.includes('wav')) {
+            extension = 'wav';
+        } else if (this.media.audioBlob.type.includes('mp3')) {
+            extension = 'mp3';
+        } else if (this.media.audioBlob.type.includes('flac')) {
+            extension = 'flac';
+        }
 
-        this.options.onLoading(true, '正在上传...');
+        const formData = new FormData();
+        formData.append('record', this.media.audioBlob, `recording.${extension}`);
+        formData.append('duration', this.state.duration.toString());
 
         try {
-            // 这里假设有一个专门的API，或者使用通用的 Mumble 发布 API
-            // 注意：Mumble 发布通常是 FormUrlEncoded 或 JSON，如果要上传文件需要 Multipart
-            // 这里只是模拟或者需要修改 Controller 支持文件上传
-            // 目前 MemberController.PublishMumble 是普通的 POST 吗？
-            // 之前 MemberController 里的 PublishMumble 只是返回 View。
-            // 真正的发布 Action 还没看。假设是 AJAX 提交。
-            
-            // 暂时模拟成功
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            this.options.onLoading(false);
-            this.options.onMessage('发布成功', 'success');
-            
-            // 触发 PJAX 刷新
-            $.pjax({ url: '/member/mumbles', container: '#pjax-container' });
-            
+            // 使用 memberCenter 的上传进度方法
+            if (typeof memberCenter !== 'undefined' && memberCenter.showProgress) {
+                memberCenter.showProgress('正在上传录音...');
+            } else {
+                this.options.onLoading(true, '正在上传...');
+            }
+
+            const result = await this.uploadWithProgress(
+                '/Audio/Upload',
+                formData,
+                (percent) => {
+                    if (typeof memberCenter !== 'undefined' && memberCenter.updateProgress) {
+                        memberCenter.updateProgress(percent, '正在上传录音...');
+                    }
+                }
+            );
+
+            if (typeof memberCenter !== 'undefined' && memberCenter.hideProgress) {
+                memberCenter.hideProgress();
+            } else {
+                this.options.onLoading(false);
+            }
+
+            if (!result.success) {
+                this.options.onMessage(result.msg || '上传失败', 'error');
+                return;
+            }
+
+            this.options.onMessage('录音上传成功', 'success');
+
+            // 插入音频标签到编辑器
+            if (result.data && result.data.accessUrl) {
+                this.insertAudioToEditor(result.data.accessUrl);
+            }
+
+            // 清除录音状态
+            this.resetState();
+
         } catch (error) {
-            this.options.onLoading(false);
+            if (typeof memberCenter !== 'undefined' && memberCenter.hideProgress) {
+                memberCenter.hideProgress();
+            } else {
+                this.options.onLoading(false);
+            }
             this.options.onMessage('上传失败: ' + error.message, 'error');
+            console.error('上传录音失败:', error);
         }
     }
 
@@ -400,6 +433,65 @@ class AudioRecorder {
         if (!this.media.audioElement) return;
         this.media.audioElement.currentTime = time;
         this.state.currentTime = time;
+        this.updateTimeDisplay(time, this.selectors.currentTime);
         this.updatePlaybackProgress();
+    }
+
+    uploadWithProgress(url, formData, onProgress) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', url, true);
+
+            // 监听上传进度
+            if (xhr.upload && onProgress) {
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const percent = Math.round((e.loaded / e.total) * 100);
+                        onProgress(percent);
+                    }
+                };
+            }
+
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        resolve(response);
+                    } catch (e) {
+                        reject(new Error('Invalid JSON response'));
+                    }
+                } else {
+                    reject(new Error(`Upload failed with status ${xhr.status}`));
+                }
+            };
+
+            xhr.onerror = () => reject(new Error('Network error'));
+            xhr.send(formData);
+        });
+    }
+
+    insertAudioToEditor(audioUrl) {
+        try {
+            // 构建音频标签的 HTML
+            const audioHtml = `\n<audio controls src="${audioUrl}" style="max-width: 100%; margin: 10px 0;"></audio>\n`;
+            
+            // 如果使用 Cherry Markdown 编辑器
+            if (typeof memberCenter !== 'undefined' && memberCenter.cherryInstance) {
+                const currentContent = memberCenter.cherryInstance.getMarkdown();
+                memberCenter.cherryInstance.setMarkdown(currentContent + audioHtml);
+            } 
+            // 如果使用普通文本框
+            else {
+                const editorEl = document.getElementById('mumbleContent') || 
+                                document.getElementById('articleContent') || 
+                                document.getElementById('timelineContent');
+                if (editorEl) {
+                    const currentContent = editorEl.value || '';
+                    editorEl.value = currentContent + audioHtml;
+                }
+            }
+        } catch (error) {
+            console.error('插入音频标签失败:', error);
+        }
     }
 }

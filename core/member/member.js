@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 /**
  * 个人中心 JavaScript
@@ -117,6 +117,7 @@ class MemberCenter {
         };
 
         this.cherryInstance = null;
+        this.photoViewer = null;
         this.initialize();
     }
 
@@ -126,6 +127,7 @@ class MemberCenter {
             this.initPjax();
             this.initTheme();
             this.initMarkdownEditor();
+            this.initPhotoViewer();
             if ($('#startRecording').length > 0) {
                 this.initAudioRecorder();
             }
@@ -169,6 +171,7 @@ class MemberCenter {
                 this.initAudioRecorder();
             }
             this.initMarkdownEditor();
+            this.initPhotoViewer();
 
             // 更新页面标题
             this.updatePageTitle();
@@ -483,12 +486,105 @@ class MemberCenter {
             const file = event.target.files[0];
             if (!file) return;
 
+            // 显示预览
             const reader = new FileReader();
             reader.onload = (e) => {
-                $('#photoPreview').attr('src', e.target.result).show();
+                $('#photoPreview').attr('src', e.target.result);
+                $('#photoPreview').show();
+                $('#imageLoadingPlaceholder').remove();
+                $('#previewContainer').addClass('active');
+                $('#dropZone').hide();
+
+                // 显示文件信息
+                $('#fileName').text(file.name);
+                $('#fileSize').text(formatFileSize(file.size));
+
+                // 初始化图片查看器
+                memberCenter.initPhotoViewer();
             };
             reader.readAsDataURL(file);
         });
+
+        // 移除文件按钮
+        $(document).on('click', '#removeFileBtn', function () {
+            $('#photoFile').val('');
+            $('#previewContainer').removeClass('active');
+            $('#dropZone').show();
+            $('#photoPreview').attr('src', '');
+
+            // 清理图片查看器
+            if (memberCenter && memberCenter.photoViewer) {
+                // 如果查看器正在显示，先关闭它
+                try {
+                    if (typeof memberCenter.photoViewer.close === 'function') {
+                        memberCenter.photoViewer.close();
+                    }
+                } catch (e) {
+                    console.warn('关闭 PhotoSwipe 失败:', e);
+                }
+                memberCenter.photoViewer = null;
+            }
+        });
+
+        // 查看大图按钮
+        $(document).on('click', '#viewPhotoBtn', function () {
+            const photoPreview = document.getElementById('photoPreview');
+            if (memberCenter && photoPreview && photoPreview.src) {
+                memberCenter.openPhotoSwipe(photoPreview);
+            }
+        });
+
+        // 拖拽效果
+        const dropZone = document.getElementById('dropZone');
+        if (dropZone) {
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, unhighlight, false);
+            });
+
+            function highlight(e) {
+                dropZone.classList.add('drag-over');
+            }
+
+            function unhighlight(e) {
+                dropZone.classList.remove('drag-over');
+            }
+
+            dropZone.addEventListener('drop', handleDrop, false);
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                const fileInput = document.getElementById('photoFile');
+
+                if (files.length > 0) {
+                    fileInput.files = files;
+                    // 手动触发 change 事件
+                    const event = new Event('change', {bubbles: true});
+                    fileInput.dispatchEvent(event);
+                }
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
     }
 
     bindModalEvents() {
@@ -887,7 +983,7 @@ class MemberCenter {
         const fileInput = document.getElementById('photoFile');
         const file = fileInput.files[0];
 
-        if (!file) {
+        if (id.trim() === '' && !file) {
             this.showMessage('请选择照片', 'warning');
             return;
         }
@@ -922,7 +1018,7 @@ class MemberCenter {
             });
 
             if (!result.success) {
-                this.showMessage(result.msg || '上传失败', 'error');
+                this.showMessage(result["msg"] || '上传失败', 'error');
                 return;
             }
             this.showMessage('照片上传成功', 'success');
@@ -1132,6 +1228,126 @@ class MemberCenter {
 
     isMobile() {
         return $(window).width() <= CONSTANTS.BREAKPOINTS.MOBILE;
+    }
+
+    /**
+     * 初始化照片查看器
+     */
+    initPhotoViewer() {
+        try {
+            const photoPreview = document.getElementById('photoPreview');
+            if (!photoPreview) return;
+
+            // 处理已加载的图片（编辑模式）
+            const loadingPlaceholder = document.getElementById('imageLoadingPlaceholder');
+            if (loadingPlaceholder && photoPreview.src && photoPreview.src !== '') {
+                // 检查图片是否已经加载
+                if (photoPreview.complete && photoPreview.naturalHeight !== 0) {
+                    // 图片已加载完成
+                    loadingPlaceholder.remove();
+                    photoPreview.style.display = 'block';
+                    this.initPhotoSwipe(photoPreview);
+                } else {
+                    // 图片还在加载中，添加加载事件监听
+                    photoPreview.onload = () => {
+                        if (loadingPlaceholder) {
+                            loadingPlaceholder.remove();
+                        }
+                        photoPreview.style.display = 'block';
+                        this.initPhotoSwipe(photoPreview);
+                    };
+
+                    photoPreview.onerror = () => {
+                        if (loadingPlaceholder) {
+                            loadingPlaceholder.innerHTML = '<i class="fa fa-exclamation-circle" style="font-size: 40px; color: var(--danger-color);"></i><span style="color: var(--text-secondary); margin-top: 8px;">照片加载失败</span>';
+                        }
+                    };
+                }
+            } else if (photoPreview.src && photoPreview.src !== '') {
+                // 没有加载占位符，直接初始化查看器
+                this.initPhotoSwipe(photoPreview);
+            }
+
+        } catch (error) {
+            console.error('初始化照片查看器失败:', error);
+        }
+    }
+
+    /**
+     * 初始化 PhotoSwipe 实例
+     */
+    initPhotoSwipe(photoPreview) {
+        try {
+            // 检查 PhotoSwipe 是否可用
+            if (typeof PhotoSwipe === 'undefined' || typeof PhotoSwipeUI_Default === 'undefined') {
+                console.warn('PhotoSwipe 未加载');
+                return;
+            }
+
+            // 点击预览图片时显示查看器
+            $(photoPreview).off('click.photoswipe').on('click.photoswipe', (e) => {
+                e.preventDefault();
+                this.openPhotoSwipe(photoPreview);
+            });
+
+        } catch (error) {
+            console.error('初始化 PhotoSwipe 实例失败:', error);
+        }
+    }
+
+    /**
+     * 打开 PhotoSwipe 查看器
+     */
+    openPhotoSwipe(imgElement) {
+        try {
+            const pswpElement = document.querySelectorAll('.pswp')[0];
+
+            // 构建图片数据
+            const items = [{
+                src: imgElement.src,
+                w: imgElement.naturalWidth || 1920,
+                h: imgElement.naturalHeight || 1080,
+                title: imgElement.alt || '照片预览'
+            }];
+
+            // PhotoSwipe 配置选项
+            const options = {
+                index: 0,
+                bgOpacity: 0.85,
+                showHideOpacity: true,
+                loop: false,
+                pinchToClose: true,
+                closeOnScroll: false,
+                closeOnVerticalDrag: true,
+                mouseUsed: false,
+                escKey: true,
+                arrowKeys: true,
+                history: false,
+                focus: true,
+                showAnimationDuration: 333,
+                hideAnimationDuration: 333,
+                getThumbBoundsFn: function (index) {
+                    const thumbnail = imgElement;
+                    const pageYScroll = window.pageYOffset || document.documentElement.scrollTop;
+                    const rect = thumbnail.getBoundingClientRect();
+                    return {
+                        x: rect.left,
+                        y: rect.top + pageYScroll,
+                        w: rect.width
+                    };
+                }
+            };
+
+            // 初始化并打开 PhotoSwipe
+            const gallery = new PhotoSwipe(pswpElement, PhotoSwipeUI_Default, items, options);
+            gallery.init();
+
+            // 保存实例引用
+            this.photoViewer = gallery;
+
+        } catch (error) {
+            console.error('打开 PhotoSwipe 失败:', error);
+        }
     }
 }
 
